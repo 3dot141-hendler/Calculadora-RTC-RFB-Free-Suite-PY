@@ -16,6 +16,7 @@
     </emit>
     <DPS>
       <infDPS>
+        <cLocEmi>4314902</cLocEmi>
         <toma>
           <CPF>12345678909</CPF>
           <xNome>João da Silva</xNome>
@@ -65,6 +66,7 @@
     const fields = [
       ["Prestador", `${data.prestador_nome} (${data.prestador_documento})`],
       ["Tomador", `${data.tomador_nome} (${data.tomador_documento})`],
+      ["Município Emissão", data.municipio_emissao || "-"],
       ["Discriminação", data.discriminacao_servico],
       ["Valor dos Serviços", formatBRL(data.valor_servicos)],
       ["Chave / Id", data.chave_id || "-"],
@@ -125,3 +127,4 @@
     }
   });
 })(window, document);
+

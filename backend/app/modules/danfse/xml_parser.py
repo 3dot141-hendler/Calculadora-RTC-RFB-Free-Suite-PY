@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 import xml.etree.ElementTree as ET
 from pydantic import BaseModel
 
+from app.modules.tabelas_oficiais.repository import buscar_localidades_ibge
 from .domain import MAPA_CSTAT, SituacaoNotaTipo, formatar_cpf_cnpj
 
 
@@ -30,6 +31,7 @@ class DanfseXmlSummary(BaseModel):
     tomador_documento: str
     valor_servicos: str
     discriminacao_servico: str
+    municipio_emissao: str = "Não informado"
 
 
 def _find_text(parent: ET.Element | None, path: str, default: str = "") -> str:
@@ -87,6 +89,13 @@ def parse_nfse_xml(xml_content: str) -> DanfseXmlSummary:
     except InvalidOperation:
         valor_dec = Decimal("0.00")
 
+    codigo_ibge_raw = _find_text(inf, "DPS/infDPS/cLocEmi") or _find_text(inf, "cLocIncid")
+    municipio_emissao = _find_text(inf, "xLocEmi", "Não informado")
+    if codigo_ibge_raw.isdigit():
+        locs = buscar_localidades_ibge(codigo=int(codigo_ibge_raw), limit=1)
+        if locs:
+            municipio_emissao = f"{locs[0]['nome']} - {locs[0]['uf_sigla']}"
+
     return DanfseXmlSummary(
         numero_nfse=numero_nfse,
         chave_id=chave_id,
@@ -100,4 +109,6 @@ def parse_nfse_xml(xml_content: str) -> DanfseXmlSummary:
         tomador_documento=formatar_cpf_cnpj(toma_doc) if toma_doc else "Não informado",
         valor_servicos=f"{valor_dec:f}",
         discriminacao_servico=_find_text(inf, "DPS/infDPS/serv/cServ/xDescServ", "Não informado"),
+        municipio_emissao=municipio_emissao,
     )
+

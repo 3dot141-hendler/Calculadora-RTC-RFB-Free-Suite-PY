@@ -65,6 +65,7 @@ def test_danfse_parse_xml_nacional_valido(client: TestClient) -> None:
         </emit>
         <DPS>
           <infDPS>
+            <cLocEmi>4314902</cLocEmi>
             <toma>
               <CPF>12345678909</CPF>
               <xNome>João da Silva</xNome>
@@ -92,6 +93,7 @@ def test_danfse_parse_xml_nacional_valido(client: TestClient) -> None:
     assert data["prestador_documento"] == "12.345.678/0001-95"
     assert data["tomador_documento"] == "123.456.789-09"
     assert data["valor_servicos"] == "3500.00"
+    assert data["municipio_emissao"] == "Porto Alegre - RS"
 
 
 def test_danfse_parse_xml_rejeita_doctype_xxe(client: TestClient) -> None:
