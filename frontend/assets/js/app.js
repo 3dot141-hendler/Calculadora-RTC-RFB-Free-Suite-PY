@@ -66,6 +66,89 @@
         </div>
       `;
     });
+
+    const itemForm = document.getElementById("simplesItemForm");
+    if (!itemForm) return;
+
+    itemForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resultEl = document.getElementById("simplesItemResult");
+      const tpEnteGov = itemForm.tp_ente_gov.value ? Number(itemForm.tp_ente_gov.value) : null;
+      const fator = itemForm.fator_transicao_compra_gov.value || null;
+      const payload = {
+        regime: itemForm.regime.value,
+        tp_rbsn: Number(itemForm.tp_rbsn.value),
+        c_ativ_sn_valido: itemForm.c_ativ_sn_valido.checked,
+        base_calculo: itemForm.base_calculo.value,
+        p_ibs_sn: itemForm.p_ibs_sn.value || null,
+        p_cbs_sn: itemForm.p_cbs_sn.value || null,
+        tp_ente_gov: tpEnteGov,
+        fator_transicao_compra_gov: fator,
+      };
+
+      const res = await fetch(`${API_BASE}/simples/calcular-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        resultEl.innerHTML = `<div class="alert alert-danger mb-0">${JSON.stringify(data.detail)}</div>`;
+        return;
+      }
+
+      const tc = data.trib_calc;
+      resultEl.innerHTML = `
+        <div class="result-box p-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Estado: ${data.estado_item}</strong>
+            <span class="badge text-bg-secondary">${data.regime}</span>
+          </div>
+          <div class="row g-2 small">
+            <div class="col-6">vRBSNitem: <strong>${formatBRL(tc.v_rbsn_item)}</strong></div>
+            <div class="col-6">vBC: <strong>${tc.v_bc ? formatBRL(tc.v_bc) : "-"}</strong></div>
+            <div class="col-6">vIBSSN (${tc.p_ibs_sn ?? "-"}%): <strong>${tc.v_ibs_sn ? formatBRL(tc.v_ibs_sn) : "-"}</strong></div>
+            <div class="col-6">vCBSSN (${tc.p_cbs_sn ?? "-"}%): <strong>${tc.v_cbs_sn ? formatBRL(tc.v_cbs_sn) : "-"}</strong></div>
+            <div class="col-12">Total Item: <strong class="text-success">${tc.total_item ? formatBRL(tc.total_item) : "-"}</strong></div>
+          </div>
+        </div>
+      `;
+    });
+
+    const bcForm = document.getElementById("baseCalculoCibsForm");
+    if (!bcForm) return;
+
+    bcForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resultEl = document.getElementById("baseCalculoCibsResult");
+      const payload = {
+        ano_fato_gerador: Number(bcForm.ano_fato_gerador.value),
+        valor_bem: bcForm.valor_bem.value,
+        frete: bcForm.frete.value || "0.00",
+        imposto_seletivo: bcForm.imposto_seletivo.value || "0.00",
+        icms: bcForm.icms.value || "0.00",
+        pis: bcForm.pis.value || "0.00",
+        desconto_incondicional: bcForm.desconto_incondicional.value || "0.00",
+      };
+
+      const res = await fetch(`${API_BASE}/regime-regular/base-calculo/cbs-ibs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        resultEl.innerHTML = `<div class="alert alert-danger mb-0">${JSON.stringify(data.detail)}</div>`;
+        return;
+      }
+
+      resultEl.innerHTML = `
+        <div class="result-box p-3">
+          <strong>Base de Cálculo CBS/IBS Apurada:</strong>
+          <span class="fs-5 fw-bold text-primary ms-2">${formatBRL(data.base_calculo)}</span>
+        </div>
+      `;
+    });
   }
 
   function bindRegimeRegularForm() {
@@ -110,6 +193,41 @@
         </div>
       `;
     });
+
+    const bcForm = document.getElementById("baseCalculoCibsForm");
+    if (!bcForm) return;
+
+    bcForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const resultEl = document.getElementById("baseCalculoCibsResult");
+      const payload = {
+        ano_fato_gerador: Number(bcForm.ano_fato_gerador.value),
+        valor_bem: bcForm.valor_bem.value,
+        frete: bcForm.frete.value || "0.00",
+        imposto_seletivo: bcForm.imposto_seletivo.value || "0.00",
+        icms: bcForm.icms.value || "0.00",
+        pis: bcForm.pis.value || "0.00",
+        desconto_incondicional: bcForm.desconto_incondicional.value || "0.00",
+      };
+
+      const res = await fetch(`${API_BASE}/regime-regular/base-calculo/cbs-ibs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        resultEl.innerHTML = `<div class="alert alert-danger mb-0">${JSON.stringify(data.detail)}</div>`;
+        return;
+      }
+
+      resultEl.innerHTML = `
+        <div class="result-box p-3">
+          <strong>Base de Cálculo CBS/IBS Apurada:</strong>
+          <span class="fs-5 fw-bold text-primary ms-2">${formatBRL(data.base_calculo)}</span>
+        </div>
+      `;
+    });
   }
 
   function bindDanfseForm() {
@@ -127,6 +245,7 @@
         valor_servicos: form.valor_servicos.value,
         valor_ibs: form.valor_ibs.value,
         valor_cbs: form.valor_cbs.value,
+        situacao_stc: Number(form.situacao_stc.value),
       };
 
       const res = await fetch(`${API_BASE}/danfse/preview`, {
@@ -140,12 +259,17 @@
         return;
       }
 
+      const watermarkBadge = data.marca_dagua
+        ? `<span class="badge text-bg-danger ms-2">${data.marca_dagua}</span>`
+        : "";
+
       resultEl.innerHTML = `
         <div class="result-box p-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong>Prévia DANFSE #${data.numero_nfse}</strong>
+            <strong>Prévia DANFSE #${data.numero_nfse}${watermarkBadge}</strong>
             <span class="badge text-bg-warning text-dark">${data.status_validacao}</span>
           </div>
+          <p class="mb-1 small">Prestador: <strong>${data.prestador_cnpj_formatado}</strong> | Tomador: <strong>${data.tomador_documento_formatado}</strong></p>
           <p class="mb-1 small">Chave Simulada: <code>${data.chave_acesso_simulada}</code></p>
           <p class="mb-1">Valor dos Serviços: <strong>${formatBRL(data.valor_servicos)}</strong></p>
           <p class="mb-0">Total IBS/CBS Destacado: <strong>${formatBRL(data.valor_total_tributos_rtc)}</strong></p>
