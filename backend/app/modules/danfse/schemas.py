@@ -3,6 +3,8 @@
 from decimal import Decimal
 from pydantic import BaseModel, Field
 
+from .domain import SituacaoNotaTipo
+
 
 class DanfsePreviewRequest(BaseModel):
     """Payload de entrada para geração de prévia estruturada de DANFSE."""
@@ -22,6 +24,7 @@ class DanfsePreviewRequest(BaseModel):
     valor_servicos: Decimal = Field(..., gt=Decimal("0.00"))
     valor_ibs: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
     valor_cbs: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
+    situacao_stc: int = Field(default=0, ge=0, le=2, description="0=Válida, 1=Substituída, 2=Cancelada.")
 
 
 class DanfsePreviewResponse(BaseModel):
@@ -30,9 +33,13 @@ class DanfsePreviewResponse(BaseModel):
     numero_nfse: str
     chave_acesso_simulada: str
     prestador_cnpj: str
+    prestador_cnpj_formatado: str
     tomador_documento: str
+    tomador_documento_formatado: str
     valor_servicos: Decimal
     valor_total_tributos_rtc: Decimal
     valor_liquido_nota: Decimal
+    situacao: SituacaoNotaTipo
+    marca_dagua: str
     status_validacao: str
 
