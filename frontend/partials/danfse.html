@@ -1,0 +1,67 @@
+<section class="row justify-content-center" aria-label="Gerador DANFSE RTC">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0 fw-bold">
+          <i class="bi bi-receipt text-warning me-2"></i>Gerador DANFSE (Prévia Estruturada)
+        </h2>
+        <span class="badge text-bg-warning text-dark">POST /api/v1/danfse/preview</span>
+      </div>
+      <div class="card-body">
+        <form id="danfseForm" class="row g-3">
+          <div class="col-md-4">
+            <label for="numero_nfse" class="form-label">Número NFS-e</label>
+            <input type="text" class="form-control" id="numero_nfse" name="numero_nfse" value="20260001" required />
+          </div>
+          <div class="col-md-4">
+            <label for="prestador_cnpj" class="form-label">CNPJ Prestador</label>
+            <input type="text" class="form-control" id="prestador_cnpj" name="prestador_cnpj" value="12345678000195" required />
+          </div>
+          <div class="col-md-4">
+            <label for="tomador_documento" class="form-label">CPF/CNPJ Tomador</label>
+            <input type="text" class="form-control" id="tomador_documento" name="tomador_documento" value="12345678909" required />
+          </div>
+          <div class="col-12">
+            <label for="discriminacao_servico" class="form-label">Discriminação do Serviço</label>
+            <input
+              type="text"
+              class="form-control"
+              id="discriminacao_servico"
+              name="discriminacao_servico"
+              value="Desenvolvimento e consultoria em sistemas tributários RTC"
+              required
+            />
+          </div>
+          <div class="col-md-3">
+            <label for="valor_servicos" class="form-label">Valor dos Serviços (R$)</label>
+            <input type="number" step="0.01" min="0.01" class="form-control" id="valor_servicos" name="valor_servicos" value="5000.00" required />
+          </div>
+          <div class="col-md-3">
+            <label for="valor_ibs" class="form-label">Valor IBS (R$)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="valor_ibs" name="valor_ibs" value="150.00" required />
+          </div>
+          <div class="col-md-3">
+            <label for="valor_cbs" class="form-label">Valor CBS (R$)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="valor_cbs" name="valor_cbs" value="100.00" required />
+          </div>
+          <div class="col-md-3">
+            <label for="situacao_stc" class="form-label">Situação (STC)</label>
+            <select class="form-select" id="situacao_stc" name="situacao_stc">
+              <option value="0" selected>0 - Válida</option>
+              <option value="1">1 - Substituída</option>
+              <option value="2">2 - Cancelada</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-warning text-dark fw-semibold">
+              <i class="bi bi-file-earmark-check me-1"></i>Gerar Prévia DANFSE
+            </button>
+          </div>
+        </form>
+
+        <div id="danfseResult" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+</section>
+

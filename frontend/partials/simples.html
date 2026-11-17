@@ -1,0 +1,144 @@
+<section class="row justify-content-center" aria-label="Calculadora Simples Nacional RTC">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0 fw-bold">
+          <i class="bi bi-shop text-success me-2"></i>Calculadora Simples Nacional (RTC)
+        </h2>
+        <span class="badge text-bg-success">POST /api/v1/simples/calcular</span>
+      </div>
+      <div class="card-body">
+        <form id="simplesForm" class="row g-3">
+          <div class="col-md-6">
+            <label for="receita_bruta_12m" class="form-label">RBT12 (Receita Bruta 12 meses - R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              max="4800000"
+              class="form-control"
+              id="receita_bruta_12m"
+              name="receita_bruta_12m"
+              value="1200000.00"
+              required
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="valor_operacao_simples" class="form-label">Valor da Operação (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              class="form-control"
+              id="valor_operacao_simples"
+              name="valor_operacao"
+              value="10000.00"
+              required
+            />
+          </div>
+          <div class="col-md-6">
+            <label for="anexo" class="form-label">Anexo LC 123</label>
+            <select class="form-select" id="anexo" name="anexo">
+              <option value="I" selected>Anexo I - Comércio</option>
+              <option value="II">Anexo II - Indústria</option>
+              <option value="III">Anexo III - Serviços</option>
+              <option value="IV">Anexo IV - Serviços (sem CPP)</option>
+              <option value="V">Anexo V - Serviços (Fator R)</option>
+            </select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="recolher_ibs_cbs_por_fora"
+                name="recolher_ibs_cbs_por_fora"
+              />
+              <label class="form-check-label" for="recolher_ibs_cbs_por_fora">
+                Recolher IBS/CBS por fora do DAS
+              </label>
+            </div>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-calculator me-1"></i>Calcular Simples Nacional
+            </button>
+          </div>
+        </form>
+
+        <div id="simplesResult" class="mt-4"></div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0 fw-bold">
+          <i class="bi bi-cpu text-success me-2"></i>Motor Oficial por Item (NT 2026.005 v1.00)
+        </h2>
+        <span class="badge text-bg-success">POST /api/v1/simples/calcular-item</span>
+      </div>
+      <div class="card-body">
+        <form id="simplesItemForm" class="row g-3">
+          <div class="col-md-4">
+            <label for="regime" class="form-label">Regime (CRT)</label>
+            <select class="form-select" id="regime" name="regime">
+              <option value="CRT_1" selected>CRT 1 - Simples Nacional</option>
+              <option value="CRT_2">CRT 2 - Excesso Sublimite</option>
+              <option value="CRT_3_TPREGIME_2">CRT 3 + tpRegime 2</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="tp_rbsn" class="form-label">Tipo Receita (tpRBSN)</label>
+            <select class="form-select" id="tp_rbsn" name="tp_rbsn">
+              <option value="1" selected>1 - Tributada integralmente</option>
+              <option value="5">5 - Redução de 50%</option>
+              <option value="4">4 - Exportação indireta</option>
+              <option value="2">2 - Imune / Isenta</option>
+              <option value="0">0 - Não compõe receita</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label for="base_calculo_item" class="form-label">Base de Cálculo (R$)</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="base_calculo_item" name="base_calculo" value="1000.00" required />
+          </div>
+          <div class="col-md-3">
+            <label for="p_ibs_sn" class="form-label">pIBSSN (%)</label>
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="p_ibs_sn" name="p_ibs_sn" value="1.50" />
+          </div>
+          <div class="col-md-3">
+            <label for="p_cbs_sn" class="form-label">pCBSSN (%)</label>
+            <input type="number" step="0.01" min="0" max="100" class="form-control" id="p_cbs_sn" name="p_cbs_sn" value="2.00" />
+          </div>
+          <div class="col-md-3">
+            <label for="tp_ente_gov" class="form-label">Compra Gov (tpEnteGov)</label>
+            <select class="form-select" id="tp_ente_gov" name="tp_ente_gov">
+              <option value="" selected>Não aplicável</option>
+              <option value="1">1 - União</option>
+              <option value="2">2 - Estado</option>
+              <option value="3">3 - DF</option>
+              <option value="4">4 - Município</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="fator_transicao_compra_gov" class="form-label">Fator Transição (0-1)</label>
+            <input type="number" step="0.01" min="0" max="1" class="form-control" id="fator_transicao_compra_gov" name="fator_transicao_compra_gov" placeholder="Ex: 0.25" />
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="c_ativ_sn_valido" name="c_ativ_sn_valido" checked />
+              <label class="form-check-label" for="c_ativ_sn_valido">Código de atividade (cAtivSN) válido e vigente</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-outline-success">
+              <i class="bi bi-play-fill me-1"></i>Executar Motor NT 2026.005
+            </button>
+          </div>
+        </form>
+
+        <div id="simplesItemResult" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+</section>
+

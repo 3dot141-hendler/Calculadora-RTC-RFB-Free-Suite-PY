@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calculadora-rtc-rfb-suite"
+version = "0.1.0"
+description = "Ecossistema unificado em Python/FastAPI para as calculadoras da Reforma Tributária (RTC) da Receita Federal."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
