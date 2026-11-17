@@ -56,6 +56,34 @@ def listar_atividades_simples(
     return [dict(row) for row in rows]
 
 
+def buscar_localidades_ibge(
+    uf: str | None = None,
+    nome: str | None = None,
+    codigo: int | None = None,
+    limit: int = 50,
+    db_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Consulta municípios IBGE no catálogo oficial somente-leitura."""
+    target = ensure_reference_db(db_path)
+    query = "SELECT codigo_ibge, nome, uf_codigo, uf_sigla FROM localidades_ibge WHERE 1=1"
+    params: list[Any] = []
+    if codigo is not None:
+        query += " AND codigo_ibge = ?"
+        params.append(codigo)
+    if uf:
+        query += " AND uf_sigla = ?"
+        params.append(uf.upper())
+    if nome:
+        query += " AND nome LIKE ?"
+        params.append(f"%{nome}%")
+    query += " ORDER BY uf_sigla, nome LIMIT ?"
+    params.append(limit)
+
+    with readonly_session(target) as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [dict(row) for row in rows]
+
+
 def obter_fator_compra_gov_simples(
     data_fato_gerador: date,
     db_path: Path | None = None,
@@ -90,3 +118,32 @@ def listar_ufs_referencia(
     with readonly_session(target) as conn:
         rows = conn.execute(query, [data_iso, data_iso]).fetchall()
     return [dict(row) for row in rows]
+
+
+def buscar_localidades_ibge(
+    uf: str | None = None,
+    nome: str | None = None,
+    codigo: int | None = None,
+    limit: int = 50,
+    db_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Consulta municípios IBGE no catálogo oficial somente-leitura."""
+    target = ensure_reference_db(db_path)
+    query = "SELECT codigo_ibge, nome, uf_codigo, uf_sigla FROM localidades_ibge WHERE 1=1"
+    params: list[Any] = []
+    if codigo is not None:
+        query += " AND codigo_ibge = ?"
+        params.append(codigo)
+    if uf:
+        query += " AND uf_sigla = ?"
+        params.append(uf.upper())
+    if nome:
+        query += " AND nome LIKE ?"
+        params.append(f"%{nome}%")
+    query += " ORDER BY uf_sigla, nome LIMIT ?"
+    params.append(limit)
+
+    with readonly_session(target) as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [dict(row) for row in rows]
+
