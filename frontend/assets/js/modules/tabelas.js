@@ -66,6 +66,29 @@
     }
   }
 
+  async function buscarLocalidades(uf, nome) {
+    const params = new URLSearchParams({ limit: "25" });
+    if (uf && uf.trim().length === 2) params.set("uf", uf.trim().toUpperCase());
+    if (nome && nome.trim().length >= 2) params.set("nome", nome.trim());
+
+    const res = await fetch(`${API_BASE}/localidades?${params.toString()}`);
+    const body = document.getElementById("tabelasLocalidadesBody");
+    if (!body || !res.ok) return;
+
+    const itens = await res.json();
+    body.replaceChildren();
+    itens.forEach((loc) => {
+      const tr = document.createElement("tr");
+      tr.append(
+        createCell(String(loc.codigo_ibge), "fw-semibold"),
+        createCell(loc.nome),
+        createCell(loc.uf_sigla),
+        createCell(String(loc.uf_codigo), "text-muted")
+      );
+      body.appendChild(tr);
+    });
+  }
+
   document.addEventListener("partial:loaded", (event) => {
     if (event.detail.route !== "tabelas") return;
 
@@ -78,5 +101,17 @@
       });
       carregarTabelas(dateInput.value);
     }
+
+    const locForm = document.getElementById("localidadesSearchForm");
+    const locUf = document.getElementById("locUfInput");
+    const locNome = document.getElementById("locNomeInput");
+    if (locForm && locUf && locNome) {
+      locForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        buscarLocalidades(locUf.value, locNome.value);
+      });
+      buscarLocalidades("", "");
+    }
   });
 })(window, document);
+
