@@ -1,7 +1,15 @@
 """Rotas FastAPI para o módulo Regime Regular (/regime-regular)."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
+from .base_calculo import (
+    BaseCalculoCibsRequest,
+    BaseCalculoISMercadoriasRequest,
+    BaseCalculoResponse,
+    CampoInvalidoError,
+    calcular_base_cibs,
+    calcular_base_is_mercadorias,
+)
 from .schemas import RegimeRegularCalculoRequest, RegimeRegularCalculoResponse
 from .service import calcular_regime_regular
 
@@ -28,4 +36,30 @@ def endpoint_calcular_regime_regular(
 ) -> RegimeRegularCalculoResponse:
     """Executa simulação de cálculo no Regime Regular da Reforma Tributária."""
     return calcular_regime_regular(payload)
+
+
+@router.post(
+    "/base-calculo/cbs-ibs",
+    response_model=BaseCalculoResponse,
+    summary="Apurar Base de Cálculo CBS/IBS (Regime Regular RFB)",
+)
+def endpoint_base_calculo_cibs(payload: BaseCalculoCibsRequest) -> BaseCalculoResponse:
+    """Calcula a base de cálculo de CBS/IBS validando vigência de tributos legados."""
+    try:
+        return calcular_base_cibs(payload)
+    except CampoInvalidoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/base-calculo/is-mercadorias",
+    response_model=BaseCalculoResponse,
+    summary="Apurar Base de Cálculo IS Mercadorias (Regime Regular RFB)",
+)
+def endpoint_base_calculo_is(payload: BaseCalculoISMercadoriasRequest) -> BaseCalculoResponse:
+    """Calcula a base de cálculo do Imposto Seletivo sobre mercadorias."""
+    try:
+        return calcular_base_is_mercadorias(payload)
+    except CampoInvalidoError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
