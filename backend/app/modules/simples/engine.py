@@ -225,3 +225,4 @@ def calcular_item_simples(insumo: InsumoCalculoSimples) -> ResultadoCalculoSimpl
             total_item=total_item,
         ),
     )
+

@@ -75,3 +75,4 @@ def formatar_quantidade(valor: Decimal) -> str:
     if normalized == normalized.to_integral_value():
         return str(int(normalized))
     return f"{valor.quantize(ESCALA_QUANTIDADE, rounding=ROUND_HALF_EVEN):f}"
+

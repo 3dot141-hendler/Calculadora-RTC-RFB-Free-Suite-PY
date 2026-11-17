@@ -164,3 +164,4 @@ def test_crt3_exportacao_indireta_zera_tributos() -> None:
     assert res.trib_calc.v_cbs_sn == Decimal("0")
     assert res.trib_calc.v_cbs_pend_susp == Decimal("0")
     assert res.trib_calc.total_item == Decimal("0")
+

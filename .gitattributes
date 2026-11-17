@@ -1,0 +1,3 @@
+references/ export-ignore
+# ou para fins de estatística do linguist:
+references/** linguist-vendored
