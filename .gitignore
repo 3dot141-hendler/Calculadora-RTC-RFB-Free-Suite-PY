@@ -46,7 +46,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Documentos pessoais locais e bancos SQLite gerados em runtime
+# Documentos pessoais locais
 docs/personal/
-backend/data/*.db
 

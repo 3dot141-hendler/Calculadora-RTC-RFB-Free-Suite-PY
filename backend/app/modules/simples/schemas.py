@@ -1,9 +1,10 @@
 """Schemas Pydantic para o módulo Simples Nacional (RTC)."""
 
+from datetime import date
 from decimal import Decimal
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from .engine import DestinoValorSimples, EstadoItemSimples, RegimeCalculoSimples
 
@@ -62,7 +63,15 @@ class SimplesItemCalculoRequest(BaseModel):
         default=RegimeCalculoSimples.CRT_1,
         description="Combinação CRT × tpRegimeIBSCBS.",
     )
+    data_fato_gerador: date = Field(
+        default=date(2026, 1, 1),
+        description="Data do fato gerador para resolução automática de vigências no SQLite.",
+    )
     tp_rbsn: int = Field(default=1, ge=0, le=9, description="Código do Tipo de Receita Bruta (tpRBSN).")
+    c_ativ_sn: Optional[str] = Field(
+        default=None,
+        description="Código de atividade cAtivSN (quando informado, é validado na tabela oficial).",
+    )
     c_ativ_sn_valido: bool = Field(
         default=True,
         description="Indica se o código de atividade cAtivSN está válido e vigente.",
@@ -84,21 +93,8 @@ class SimplesItemCalculoRequest(BaseModel):
         default=None,
         ge=Decimal("0.00"),
         le=Decimal("1.00"),
-        description="Fator de transição CBS→IBS para tpEnteGov ∈ {2, 3, 4}.",
+        description="Fator de transição CBS→IBS para tpEnteGov ∈ {2, 3, 4} (opcional se vigente no banco).",
     )
-
-    @model_validator(mode="after")
-    def validar_fator_compra_gov(self) -> "SimplesItemCalculoRequest":
-        """Exige fator de transição quando tpEnteGov é 2, 3 ou 4 e há alíquota informada."""
-        if (
-            self.tp_ente_gov in {2, 3, 4}
-            and (self.p_ibs_sn is not None or self.p_cbs_sn is not None)
-            and self.fator_transicao_compra_gov is None
-        ):
-            raise ValueError(
-                "fator_transicao_compra_gov é obrigatório quando tp_ente_gov é 2, 3 ou 4."
-            )
-        return self
 
 
 class SimplesItemTributosResponse(BaseModel):

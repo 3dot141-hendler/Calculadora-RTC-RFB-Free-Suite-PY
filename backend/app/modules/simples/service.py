@@ -3,6 +3,10 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from app.core.rounding import formatar_aliquota, formatar_moeda
+from app.modules.tabelas_oficiais.repository import (
+    listar_atividades_simples,
+    obter_fator_compra_gov_simples,
+)
 from .engine import (
     DestinoValorSimples,
     InsumoCalculoSimples,
@@ -102,7 +106,7 @@ _TIPOS_RECEITA_PADRAO: dict[int, TipoReceitaBrutaConfig] = {
 
 
 def calcular_item_simples_api(payload: SimplesItemCalculoRequest) -> SimplesItemCalculoResponse:
-    """Resolve parâmetros padrão e executa o motor puro NT 2026.005 v1.00."""
+    """Resolve parâmetros vigentes no SQLite e executa o motor puro NT 2026.005 v1.00."""
     regime_cfg = _REGIMES_PADRAO[payload.regime]
     tipo_receita_cfg = _TIPOS_RECEITA_PADRAO.get(
         payload.tp_rbsn,
@@ -116,17 +120,35 @@ def calcular_item_simples_api(payload: SimplesItemCalculoRequest) -> SimplesItem
         ),
     )
 
+    c_ativ_valido = payload.c_ativ_sn_valido
+    if payload.c_ativ_sn is not None:
+        atividades = listar_atividades_simples(payload.data_fato_gerador)
+        c_ativ_valido = any(a["codigo"] == payload.c_ativ_sn for a in atividades)
+
+    fator_gov = payload.fator_transicao_compra_gov
+    if (
+        payload.tp_ente_gov in {2, 3, 4}
+        and (payload.p_ibs_sn is not None or payload.p_cbs_sn is not None)
+        and fator_gov is None
+    ):
+        registro = obter_fator_compra_gov_simples(payload.data_fato_gerador)
+        if registro is None:
+            raise ValueError(
+                f"Fator de transição compra gov não vigente para {payload.data_fato_gerador.isoformat()}."
+            )
+        fator_gov = Decimal(registro["fator"])
+
     resultado = calcular_item_simples(
         InsumoCalculoSimples(
             regime=regime_cfg,
             tipo_receita_bruta=tipo_receita_cfg,
-            c_ativ_sn_valido=payload.c_ativ_sn_valido,
+            c_ativ_sn_valido=c_ativ_valido,
             base_calculo=payload.base_calculo,
             valor_imposto_seletivo=payload.valor_imposto_seletivo,
             p_ibs_sn=payload.p_ibs_sn,
             p_cbs_sn=payload.p_cbs_sn,
             tp_ente_gov=payload.tp_ente_gov,
-            fator_transicao_compra_gov=payload.fator_transicao_compra_gov,
+            fator_transicao_compra_gov=fator_gov,
         )
     )
 

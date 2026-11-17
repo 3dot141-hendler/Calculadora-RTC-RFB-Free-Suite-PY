@@ -1,6 +1,6 @@
 """Rotas FastAPI para o módulo Simples Nacional (/simples)."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from .schemas import (
     SimplesCalculoRequest,
@@ -42,5 +42,8 @@ def endpoint_calcular_item_simples(
     payload: SimplesItemCalculoRequest,
 ) -> SimplesItemCalculoResponse:
     """Executa o motor oficial de cálculo por item (CRT, tpRBSN, compra governamental)."""
-    return calcular_item_simples_api(payload)
+    try:
+        return calcular_item_simples_api(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 

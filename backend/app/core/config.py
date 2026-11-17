@@ -45,7 +45,7 @@ class Settings(BaseSettings):
         """Caminho absoluto para o banco SQLite de tabelas oficiais da RFB."""
         if self.reference_db_path:
             return Path(self.reference_db_path)
-        return Path(__file__).resolve().parents[2] / "data" / "rtc_referencias.db"
+        return Path(__file__).resolve().parents[3] / "database" / "rtc_referencias.db"
 
 
 @lru_cache
