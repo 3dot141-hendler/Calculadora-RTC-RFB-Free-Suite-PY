@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.modules.danfse.router import router as danfse_router
 from app.modules.regime_regular.router import router as regime_regular_router
 from app.modules.simples.router import router as simples_router
+from app.modules.tabelas_oficiais.router import router as tabelas_router
 
 
 def create_app() -> FastAPI:
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     api_router.include_router(simples_router)
     api_router.include_router(regime_regular_router)
     api_router.include_router(danfse_router)
+    api_router.include_router(tabelas_router)
 
     application.include_router(api_router)
 
