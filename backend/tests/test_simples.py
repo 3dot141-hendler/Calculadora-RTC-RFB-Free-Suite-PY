@@ -33,3 +33,36 @@ def test_simples_rejeita_rbt12_acima_limite(client: TestClient) -> None:
     response = client.post("/api/v1/simples/calcular", json=payload)
     assert response.status_code == 422
 
+
+def test_simples_calcular_item_crt1(client: TestClient) -> None:
+    payload = {
+        "regime": "CRT_1",
+        "tp_rbsn": 1,
+        "c_ativ_sn_valido": True,
+        "base_calculo": "1000.00",
+        "valor_imposto_seletivo": "0.00",
+        "p_ibs_sn": "1.50",
+        "p_cbs_sn": "2.00",
+    }
+    response = client.post("/api/v1/simples/calcular-item", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["estado_item"] == "CALCULADO"
+    assert data["trib_calc"]["v_ibs_sn"] == "15.00"
+    assert data["trib_calc"]["v_cbs_sn"] == "20.00"
+    assert data["trib_calc"]["total_item"] == "35.00"
+
+
+def test_simples_calcular_item_rejeita_compra_gov_sem_fator(client: TestClient) -> None:
+    payload = {
+        "regime": "CRT_1",
+        "tp_rbsn": 1,
+        "c_ativ_sn_valido": True,
+        "base_calculo": "1000.00",
+        "p_ibs_sn": "1.50",
+        "p_cbs_sn": "2.00",
+        "tp_ente_gov": 3,
+    }
+    response = client.post("/api/v1/simples/calcular-item", json=payload)
+    assert response.status_code == 422
+
