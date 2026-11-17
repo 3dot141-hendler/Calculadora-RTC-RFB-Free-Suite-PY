@@ -1,8 +1,8 @@
-"""Serviço de regras de negócio do Simples Nacional (esqueleto para port da RFB)."""
+"""Serviço de regras de negócio do Simples Nacional (LC 123/2006 + NT 2026.005)."""
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_EVEN
 
-from app.core.rounding import formatar_aliquota, formatar_moeda
+from app.core.rounding import formatar_aliquota, formatar_moeda, multiplicar, multiplicar_por_cem
 from app.modules.tabelas_oficiais.repository import (
     listar_atividades_simples,
     obter_fator_compra_gov_simples,
@@ -16,50 +16,32 @@ from .engine import (
     calcular_item_simples,
 )
 from .schemas import (
-    AnexoSimples,
     SimplesCalculoRequest,
     SimplesCalculoResponse,
     SimplesItemCalculoRequest,
     SimplesItemCalculoResponse,
     SimplesItemTributosResponse,
 )
-
-# Tabela simplificada de alíquota nominal base por anexo (referência inicial para TDD)
-_ALIQUOTA_BASE_ANEXO: dict[AnexoSimples, Decimal] = {
-    AnexoSimples.ANEXO_I: Decimal("0.0400"),
-    AnexoSimples.ANEXO_II: Decimal("0.0450"),
-    AnexoSimples.ANEXO_III: Decimal("0.0600"),
-    AnexoSimples.ANEXO_IV: Decimal("0.0450"),
-    AnexoSimples.ANEXO_V: Decimal("0.1550"),
-}
+from .tabelas_lc123 import calcular_aliquota_efetiva_lc123
 
 _ALIQUOTA_TRANSICAO_IBS_CBS = Decimal("0.0100")  # 1,0% referência inicial de transição
 
 
 def _round_money(value: Decimal) -> Decimal:
-    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
 
 
 def calcular_simples(payload: SimplesCalculoRequest) -> SimplesCalculoResponse:
-    """Executa o cálculo estimado do Simples Nacional com parametrização RTC.
-
-    As faixas progressivas completas e deduções por partilha de tributos serão
-    portadas a partir do código de referência em `originals:references/simples`.
-    """
-    aliquota_base = _ALIQUOTA_BASE_ANEXO[payload.anexo]
-    fator_faixa = (payload.receita_bruta_12m / Decimal("4800000.00")) * Decimal("0.05")
-    aliquota_efetiva = (aliquota_base + fator_faixa).quantize(
-        Decimal("0.0001"), rounding=ROUND_HALF_UP
-    )
-
-    valor_das = _round_money(payload.valor_operacao * aliquota_efetiva)
+    """Executa o cálculo do Simples Nacional pelas faixas progressivas da LC 123/2006."""
+    aliquota_efetiva = calcular_aliquota_efetiva_lc123(payload.anexo, payload.receita_bruta_12m)
+    valor_das = _round_money(multiplicar(payload.valor_operacao, aliquota_efetiva))
 
     if payload.recolher_ibs_cbs_por_fora:
-        valor_ibs_cbs = _round_money(payload.valor_operacao * _ALIQUOTA_TRANSICAO_IBS_CBS)
-        obs = "Cálculo com IBS/CBS destacado por fora do DAS (opção regime regular)."
+        valor_ibs_cbs = _round_money(multiplicar(payload.valor_operacao, _ALIQUOTA_TRANSICAO_IBS_CBS))
+        obs = "LC 123/2006 + IBS/CBS destacado por fora do DAS (opção regime regular)."
     else:
-        valor_ibs_cbs = _round_money(valor_das * Decimal("0.20"))
-        obs = "Cálculo unificado via DAS com parcela estimada de IBS/CBS."
+        valor_ibs_cbs = _round_money(multiplicar(valor_das, Decimal("0.20")))
+        obs = "LC 123/2006 unificado via DAS com parcela estimada de IBS/CBS."
 
     valor_total = (
         valor_das + valor_ibs_cbs if payload.recolher_ibs_cbs_por_fora else valor_das
@@ -67,7 +49,7 @@ def calcular_simples(payload: SimplesCalculoRequest) -> SimplesCalculoResponse:
 
     return SimplesCalculoResponse(
         anexo=payload.anexo,
-        aliquota_efetiva_das=(aliquota_efetiva * Decimal("100")).quantize(Decimal("0.01")),
+        aliquota_efetiva_das=Decimal(formatar_aliquota(multiplicar_por_cem(aliquota_efetiva))),
         valor_das=valor_das,
         valor_ibs_cbs_estimado=valor_ibs_cbs,
         valor_total_tributos=_round_money(valor_total),
