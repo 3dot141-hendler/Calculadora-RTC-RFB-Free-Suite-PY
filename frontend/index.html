@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora RTC RFB Free Suite PY</title>
+
+  <!-- Bootstrap 5.3 & Bootstrap Icons -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    crossorigin="anonymous"
+  />
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    rel="stylesheet"
+    crossorigin="anonymous"
+  />
+
+  <!-- CSS Customizado com Cache-Busting Dinâmico (?v={mtime}) -->
+  <link rel="stylesheet" data-cache-bust href="assets/css/style.css" />
+</head>
+<body class="bg-light">
+  <div class="app-shell d-flex min-vh-100">
+    <!-- Sidebar Flexível com Submenus e Modo Mini -->
+    <aside id="appSidebar" class="sidebar d-flex flex-column flex-shrink-0 text-white" aria-label="Navegação principal">
+      <div class="sidebar-header d-flex align-items-center justify-content-between px-3 py-3 border-bottom border-secondary-subtle border-opacity-25">
+        <a href="#dashboard" class="d-flex align-items-center gap-2 text-white text-decoration-none brand-link" data-route="dashboard">
+          <i class="bi bi-calculator-fill fs-4 text-info"></i>
+          <span class="sidebar-label fw-semibold text-truncate">RTC Suite PY</span>
+        </a>
+        <button
+          id="toggleSidebarBtn"
+          type="button"
+          class="btn btn-sm btn-outline-light border-0"
+          title="Alternar modo mini-sidebar"
+          aria-label="Alternar sidebar"
+        >
+          <i class="bi bi-layout-sidebar-inset"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav flex-grow-1 py-3 px-2">
+        <ul class="nav nav-pills flex-column gap-1">
+          <li class="nav-item">
+            <a
+              href="#dashboard"
+              class="nav-link text-white d-flex align-items-center gap-2 active"
+              data-route="dashboard"
+              data-bs-toggle="tooltip"
+              data-bs-placement="right"
+              data-bs-title="Visão Geral"
+            >
+              <i class="bi bi-speedometer2"></i>
+              <span class="sidebar-label">Visão Geral</span>
+            </a>
+          </li>
+
+          <!-- Submenu Expansível: Calculadoras RTC -->
+          <li class="nav-item">
+            <button
+              type="button"
+              class="nav-link text-white w-100 d-flex align-items-center justify-content-between submenu-toggle"
+              data-submenu="calculadoras"
+              aria-expanded="true"
+              data-bs-toggle="tooltip"
+              data-bs-placement="right"
+              data-bs-title="Calculadoras RTC"
+            >
+              <span class="d-flex align-items-center gap-2">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span class="sidebar-label">Calculadoras RTC</span>
+              </span>
+              <i class="bi bi-chevron-down submenu-chevron sidebar-label"></i>
+            </button>
+            <ul class="nav flex-column submenu-list ps-3 mt-1 gap-1" data-submenu-content="calculadoras">
+              <li class="nav-item">
+                <a
+                  href="#simples"
+                  class="nav-link text-white-50 d-flex align-items-center justify-content-between"
+                  data-route="simples"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="right"
+                  data-bs-title="Simples Nacional"
+                >
+                  <span class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shop"></i>
+                    <span class="sidebar-label">Simples Nacional</span>
+                  </span>
+                  <span class="badge text-bg-success sidebar-label">DAS</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="#regime-regular"
+                  class="nav-link text-white-50 d-flex align-items-center justify-content-between"
+                  data-route="regime-regular"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="right"
+                  data-bs-title="Regime Regular"
+                >
+                  <span class="d-flex align-items-center gap-2">
+                    <i class="bi bi-building-gear"></i>
+                    <span class="sidebar-label">Regime Regular</span>
+                  </span>
+                  <span class="badge text-bg-primary sidebar-label">IBS/CBS</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+
+          <!-- Submenu Expansível: Documentos Fiscais -->
+          <li class="nav-item">
+            <button
+              type="button"
+              class="nav-link text-white w-100 d-flex align-items-center justify-content-between submenu-toggle"
+              data-submenu="documentos"
+              aria-expanded="true"
+              data-bs-toggle="tooltip"
+              data-bs-placement="right"
+              data-bs-title="Documentos Fiscais"
+            >
+              <span class="d-flex align-items-center gap-2">
+                <i class="bi bi-file-earmark-text-fill"></i>
+                <span class="sidebar-label">Documentos Fiscais</span>
+              </span>
+              <i class="bi bi-chevron-down submenu-chevron sidebar-label"></i>
+            </button>
+            <ul class="nav flex-column submenu-list ps-3 mt-1 gap-1" data-submenu-content="documentos">
+              <li class="nav-item">
+                <a
+                  href="#danfse"
+                  class="nav-link text-white-50 d-flex align-items-center justify-content-between"
+                  data-route="danfse"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="right"
+                  data-bs-title="Gerador DANFSE"
+                >
+                  <span class="d-flex align-items-center gap-2">
+                    <i class="bi bi-receipt"></i>
+                    <span class="sidebar-label">Gerador DANFSE</span>
+                  </span>
+                  <span class="badge text-bg-warning text-dark sidebar-label">NFS-e</span>
+                </a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer p-3 border-top border-secondary-subtle border-opacity-25">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-info w-100 d-flex align-items-center justify-content-center gap-2"
+          data-bs-toggle="modal"
+          data-bs-target="#aboutModal"
+        >
+          <i class="bi bi-info-circle"></i>
+          <span class="sidebar-label">Sobre a Suite</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Conteúdo Principal -->
+    <div class="main-wrapper flex-grow-1 d-flex flex-column">
+      <header class="topbar bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <button
+            id="mobileMenuBtn"
+            type="button"
+            class="btn btn-outline-secondary btn-sm d-lg-none"
+            aria-label="Abrir menu"
+          >
+            <i class="bi bi-list"></i>
+          </button>
+          <div>
+            <h1 id="pageTitle" class="h5 mb-0 fw-bold text-dark">Visão Geral</h1>
+            <small class="text-muted">Ecossistema Unificado da Reforma Tributária (RTC)</small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+          <span id="apiStatusBadge" class="badge rounded-pill text-bg-secondary">
+            <i class="bi bi-circle-fill me-1 small"></i>Verificando API...
+          </span>
+          <a href="/api/docs" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-braces me-1"></i>Swagger
+          </a>
+        </div>
+      </header>
+
+      <main id="partial-container" class="container-fluid p-4 flex-grow-1" aria-live="polite">
+        <div class="d-flex justify-content-center align-items-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Carregando módulo...</span>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal Interativo: Sobre a Suite -->
+  <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="aboutModalLabel">
+            <i class="bi bi-layers-fill text-primary me-2"></i>Calculadora RTC RFB Free Suite PY
+          </h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">
+            Suite open-source em <strong>Python/FastAPI</strong> e <strong>Bootstrap 5.3</strong> unificando os
+            componentes oficiais da Reforma Tributária da Receita Federal:
+          </p>
+          <ul class="list-group list-group-flush mb-3">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Simples Nacional (RTC)
+              <span class="badge text-bg-success">/api/v1/simples</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Regime Regular (IBS/CBS/IS)
+              <span class="badge text-bg-primary">/api/v1/regime-regular</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Gerador DANFSE
+              <span class="badge text-bg-warning text-dark">/api/v1/danfse</span>
+            </li>
+          </ul>
+          <small class="text-muted">Cache-busting dinâmico (<code>?v={mtime}</code>) e partials assíncronos ativos.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Bundle JS -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+    crossorigin="anonymous"
+  ></script>
+
+  <!-- Cache Buster primeiro para versionar assets e partials em runtime -->
+  <script src="assets/js/cache-buster.js"></script>
+  <script data-cache-bust src="assets/js/sidebar.js"></script>
+  <script data-cache-bust src="assets/js/router.js"></script>
+  <script data-cache-bust src="assets/js/app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,46 @@
+# ==============================================================================
+# Docker Compose Unificado - Calculadora RTC RFB Free Suite PY
+# Simula o ambiente de produção (API FastAPI + Frontend Nginx) para Staging/VPS
+# ==============================================================================
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rtc-rfb-backend
+    restart: unless-stopped
+    env_file:
+      - .env.example
+    environment:
+      - APP_ENV=staging
+      - DEBUG=false
+      - SERVE_FRONTEND=false
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - rtc-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rtc-rfb-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - rtc-network
+
+networks:
+  rtc-network:
+    driver: bridge
+

@@ -1,0 +1,2 @@
+"""Módulo Simples Nacional (RTC)."""
+
