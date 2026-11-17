@@ -67,3 +67,4 @@ def formatar_cpf_cnpj(documento: str) -> str:
     if len(digits) == 14:
         return f"{digits[:2]}.{digits[2:5]}.{digits[5:8]}/{digits[8:12]}-{digits[12:]}"
     return documento
+

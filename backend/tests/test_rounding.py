@@ -41,3 +41,4 @@ def test_totalizar_sem_arredondamento_intermediario() -> None:
     valores = [Decimal("10.004"), Decimal("10.004")]
     assert totalizar(valores) == Decimal("20.008")
     assert formatar_moeda(totalizar(valores)) == "20.01"
+
