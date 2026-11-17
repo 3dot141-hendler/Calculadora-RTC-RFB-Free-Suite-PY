@@ -1,0 +1,73 @@
+<section class="row g-4" aria-label="Consulta às Tabelas Oficiais da RFB">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body d-flex flex-wrap align-items-end justify-content-between gap-3">
+        <div>
+          <h2 class="h6 fw-bold mb-1">
+            <i class="bi bi-database-check text-info me-2"></i>Tabelas Oficiais Vigentes (SQLite Read-Only)
+          </h2>
+          <p class="text-muted small mb-0">
+            Consulte classificações CST/cClassTrib, atividades do Simples Nacional e alíquotas de referência por data de vigência.
+          </p>
+        </div>
+        <form id="tabelasFilterForm" class="d-flex align-items-end gap-2">
+          <div>
+            <label for="tabelasDataVigencia" class="form-label small mb-1">Data Fato Gerador</label>
+            <input type="date" id="tabelasDataVigencia" class="form-control form-control-sm" value="2026-01-01" required />
+          </div>
+          <button type="submit" class="btn btn-sm btn-primary">
+            <i class="bi bi-search me-1"></i>Consultar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div id="tabelasCompraGovBanner" class="alert alert-info border-0 shadow-sm mb-0 py-2 small">
+      Carregando fator de transição compra governamental...
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-bold small">
+        <i class="bi bi-tags me-1 text-primary"></i>CST &amp; cClassTrib
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>CST</th>
+              <th>cClassTrib</th>
+              <th>Descrição</th>
+              <th class="text-end">Red. IBS/CBS</th>
+            </tr>
+          </thead>
+          <tbody id="tabelasCstBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-bold small">
+        <i class="bi bi-shop me-1 text-success"></i>Atividades Simples Nacional (cAtivSN)
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Código</th>
+              <th>Descrição</th>
+              <th>Anexo Base</th>
+              <th>Fator R</th>
+            </tr>
+          </thead>
+          <tbody id="tabelasAtivBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>

@@ -20,3 +20,67 @@ def test_regime_regular_calcular_com_creditos(client: TestClient) -> None:
     assert data["creditos_aproveitados"] == "58.00"
     assert data["valor_liquido_a_recolher"] == "200.00"
 
+
+def test_base_calculo_cibs_valida_composicao_e_vigencia(client: TestClient) -> None:
+    payload = {
+        "ano_fato_gerador": 2026,
+        "valor_bem": "1000.00",
+        "frete": "100.00",
+        "imposto_seletivo": "50.00",
+        "icms": "180.00",
+        "pis": "16.50",
+        "desconto_incondicional": "20.00",
+    }
+    response = client.post("/api/v1/regime-regular/base-calculo/cbs-ibs", json=payload)
+    assert response.status_code == 200
+    assert response.json()["base_calculo"] == "933.50"
+
+
+def test_base_calculo_cibs_rejeita_pis_em_2027(client: TestClient) -> None:
+    payload = {
+        "ano_fato_gerador": 2027,
+        "valor_bem": "1000.00",
+        "pis": "10.00",
+    }
+    response = client.post("/api/v1/regime-regular/base-calculo/cbs-ibs", json=payload)
+    assert response.status_code == 422
+    assert "2027" in response.json()["detail"]
+
+
+def test_base_calculo_is_rejeita_ano_anterior_a_2027(client: TestClient) -> None:
+    payload = {
+        "ano_fato_gerador": 2026,
+        "valor_bem": "1000.00",
+    }
+    response = client.post("/api/v1/regime-regular/base-calculo/is-mercadorias", json=payload)
+    assert response.status_code == 422
+    assert "2027" in response.json()["detail"]
+
+
+def test_base_calculo_rejeita_valor_negativo(client: TestClient) -> None:
+    payload = {
+        "ano_fato_gerador": 2026,
+        "valor_bem": "100.00",
+        "desconto_incondicional": "150.00",
+    }
+    response = client.post("/api/v1/regime-regular/base-calculo/cbs-ibs", json=payload)
+    assert response.status_code == 422
+
+
+def test_regime_regular_resolve_uf_e_cclasstrib_do_sqlite(client: TestClient) -> None:
+    # cClassTrib 200028 tem redução de 60% no SQLite; UF RS tem IBS_UF=10% e CBS=8.8%
+    payload = {
+        "data_fato_gerador": "2026-06-01",
+        "uf": "RS",
+        "c_class_trib": "200028",
+        "valor_operacao": "1000.00",
+        "aliquota_ibs_mun": "0.00",
+    }
+    response = client.post("/api/v1/regime-regular/calcular", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    # 1000 * 10% * (1 - 0.60) = 40.00; 1000 * 8.8% * (1 - 0.60) = 35.20
+    assert data["valor_ibs_uf"] == "40.00"
+    assert data["valor_cbs"] == "35.20"
+    assert data["valor_liquido_a_recolher"] == "75.20"
+
