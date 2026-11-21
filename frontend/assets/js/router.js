@@ -13,6 +13,7 @@
     simples: "Simples Nacional (RTC)",
     "regime-regular": "Regime Regular (IBS / CBS / IS)",
     danfse: "Gerador DANFSE",
+    tabelas: "Tabelas Oficiais (RFB)",
   };
 
   function updateActiveNav(route) {

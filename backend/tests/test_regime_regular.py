@@ -66,3 +66,21 @@ def test_base_calculo_rejeita_valor_negativo(client: TestClient) -> None:
     response = client.post("/api/v1/regime-regular/base-calculo/cbs-ibs", json=payload)
     assert response.status_code == 422
 
+
+def test_regime_regular_resolve_uf_e_cclasstrib_do_sqlite(client: TestClient) -> None:
+    # cClassTrib 200028 tem redução de 60% no SQLite; UF RS tem IBS_UF=10% e CBS=8.8%
+    payload = {
+        "data_fato_gerador": "2026-06-01",
+        "uf": "RS",
+        "c_class_trib": "200028",
+        "valor_operacao": "1000.00",
+        "aliquota_ibs_mun": "0.00",
+    }
+    response = client.post("/api/v1/regime-regular/calcular", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    # 1000 * 10% * (1 - 0.60) = 40.00; 1000 * 8.8% * (1 - 0.60) = 35.20
+    assert data["valor_ibs_uf"] == "40.00"
+    assert data["valor_cbs"] == "35.20"
+    assert data["valor_liquido_a_recolher"] == "75.20"
+

@@ -1,12 +1,28 @@
 """Schemas Pydantic para o módulo Regime Regular (IBS/CBS/IS)."""
 
+from datetime import date
 from decimal import Decimal
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
 class RegimeRegularCalculoRequest(BaseModel):
     """Payload de entrada para cálculo no Regime Regular da Reforma Tributária."""
 
+    data_fato_gerador: date = Field(
+        default=date(2026, 1, 1),
+        description="Data do fato gerador para resolução automática de tabelas vigentes.",
+    )
+    uf: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=2,
+        description="UF de destino para resolver alíquota de referência do SQLite.",
+    )
+    c_class_trib: Optional[str] = Field(
+        default=None,
+        description="Código cClassTrib para aplicar redução oficial de alíquota do SQLite.",
+    )
     valor_operacao: Decimal = Field(..., gt=Decimal("0.00"), description="Valor base da operação (R$).")
     aliquota_ibs_uf: Decimal = Field(
         default=Decimal("10.00"), ge=Decimal("0.00"), le=Decimal("100.00"), description="Alíquota IBS Estadual (%)."

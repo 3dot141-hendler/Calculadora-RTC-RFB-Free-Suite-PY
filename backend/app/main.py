@@ -1,5 +1,7 @@
 """Ponto de entrada unificado da API Calculadora RTC RFB Free Suite PY."""
 
+from pathlib import Path
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +10,7 @@ from app.core.config import get_settings
 from app.modules.danfse.router import router as danfse_router
 from app.modules.regime_regular.router import router as regime_regular_router
 from app.modules.simples.router import router as simples_router
+from app.modules.tabelas_oficiais.router import router as tabelas_router
 
 
 def create_app() -> FastAPI:
@@ -48,6 +51,7 @@ def create_app() -> FastAPI:
     api_router.include_router(simples_router)
     api_router.include_router(regime_regular_router)
     api_router.include_router(danfse_router)
+    api_router.include_router(tabelas_router)
 
     application.include_router(api_router)
 
@@ -64,3 +68,15 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+
+if __name__ == "__main__":
+    import uvicorn
+
+    settings = get_settings()
+    uvicorn.run(
+        "app.main:app",
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.debug,
+        app_dir=str(Path(__file__).resolve().parents[1]),
+    )
