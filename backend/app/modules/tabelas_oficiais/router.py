@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 
 from .repository import (
+    buscar_localidades_ibge,
     listar_atividades_simples,
     listar_cst_classificacao,
     listar_ufs_referencia,
@@ -52,3 +53,15 @@ def endpoint_listar_ufs(
 ) -> list[dict[str, Any]]:
     """Lista alíquotas de referência de IBS Estadual e CBS por UF."""
     return listar_ufs_referencia(data_fato_gerador=data_fato_gerador)
+
+
+@router.get("/localidades", summary="Consultar municípios IBGE (catálogo DANFSE)")
+def endpoint_buscar_localidades(
+    uf: str | None = Query(default=None, min_length=2, max_length=2),
+    nome: str | None = Query(default=None, min_length=2),
+    codigo: int | None = Query(default=None, ge=1000000),
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[dict[str, Any]]:
+    """Consulta municípios IBGE por UF, nome ou código de 7 dígitos."""
+    return buscar_localidades_ibge(uf=uf, nome=nome, codigo=codigo, limit=limit)
+

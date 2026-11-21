@@ -82,3 +82,18 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
             ("DF", "Distrito Federal", "10.00", "8.80", "2026-01-01", None),
         ],
     )
+
+    conn.executemany(
+        """
+        INSERT INTO localidades_ibge (codigo_ibge, nome, uf_codigo, uf_sigla)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (4314902, "Porto Alegre", 43, "RS"),
+            (4307609, "Esteio", 43, "RS"),
+            (3550308, "São Paulo", 35, "SP"),
+            (3304557, "Rio de Janeiro", 33, "RJ"),
+            (5300108, "Brasília", 53, "DF"),
+        ],
+    )
+

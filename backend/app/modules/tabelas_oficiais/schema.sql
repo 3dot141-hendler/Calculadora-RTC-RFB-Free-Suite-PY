@@ -42,3 +42,14 @@ CREATE TABLE IF NOT EXISTS uf_aliquota_referencia (
     fim_vigencia TEXT,
     PRIMARY KEY (uf, inicio_vigencia)
 );
+
+CREATE TABLE IF NOT EXISTS localidades_ibge (
+    codigo_ibge INTEGER PRIMARY KEY,
+    nome TEXT NOT NULL,
+    uf_codigo INTEGER NOT NULL,
+    uf_sigla TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_localidades_uf_nome
+    ON localidades_ibge (uf_sigla, nome);
+

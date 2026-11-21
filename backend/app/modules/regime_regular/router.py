@@ -10,6 +10,11 @@ from .base_calculo import (
     calcular_base_cibs,
     calcular_base_is_mercadorias,
 )
+from .operacao import (
+    OperacaoRegimeRegularRequest,
+    OperacaoRegimeRegularResponse,
+    calcular_operacao_regime_regular,
+)
 from .schemas import RegimeRegularCalculoRequest, RegimeRegularCalculoResponse
 from .service import calcular_regime_regular
 
@@ -62,4 +67,16 @@ def endpoint_base_calculo_is(payload: BaseCalculoISMercadoriasRequest) -> BaseCa
         return calcular_base_is_mercadorias(payload)
     except CampoInvalidoError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/calcular-operacao",
+    response_model=OperacaoRegimeRegularResponse,
+    summary="Calcular operação com múltiplos itens, redução CST e diferimento",
+)
+def endpoint_calcular_operacao_regime_regular(
+    payload: OperacaoRegimeRegularRequest,
+) -> OperacaoRegimeRegularResponse:
+    """Calcula múltiplos itens no Regime Regular com totalização sem arredondamento intermediário."""
+    return calcular_operacao_regime_regular(payload)
 

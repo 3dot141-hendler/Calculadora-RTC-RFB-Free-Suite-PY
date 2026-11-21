@@ -116,3 +116,12 @@ body.sidebar-mini .sidebar .brand-link {
   }
 }
 
+@media print {
+  .sidebar,
+  .topbar,
+  form,
+  .card-header {
+    display: none !important;
+  }
+}
+

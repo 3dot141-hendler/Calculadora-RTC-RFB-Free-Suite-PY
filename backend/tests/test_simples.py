@@ -93,3 +93,19 @@ def test_simples_calcular_item_resolve_fator_e_cativ_do_sqlite(client: TestClien
     assert res_invalido.status_code == 200
     assert res_invalido.json()["estado_item"] == "NAO_CALCULADO"
 
+
+def test_simples_lc123_faixa_progressiva_anexo_i(client: TestClient) -> None:
+    # Anexo I, RBT12 = 1.200.000 (4a faixa: 10.70% - dedução 22.500)
+    # Aliq efetiva = (1.200.000 * 0.1070 - 22.500) / 1.200.000 = 8.825%
+    payload = {
+        "receita_bruta_12m": "1200000.00",
+        "valor_operacao": "10000.00",
+        "anexo": "I",
+        "recolher_ibs_cbs_por_fora": False,
+    }
+    response = client.post("/api/v1/simples/calcular", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["aliquota_efetiva_das"] == "8.825"
+    assert data["valor_das"] == "882.50"
+

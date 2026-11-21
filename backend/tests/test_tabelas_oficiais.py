@@ -46,3 +46,8 @@ def test_endpoints_tabelas_oficiais(client: TestClient) -> None:
     res_ufs = client.get("/api/v1/tabelas/ufs")
     assert res_ufs.status_code == 200
     assert len(res_ufs.json()) >= 5
+
+    res_loc = client.get("/api/v1/tabelas/localidades?uf=RS&nome=Porto")
+    assert res_loc.status_code == 200
+    assert any(item["codigo_ibge"] == 4314902 for item in res_loc.json())
+
