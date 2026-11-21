@@ -1,5 +1,7 @@
 """Ponto de entrada unificado da API Calculadora RTC RFB Free Suite PY."""
 
+from pathlib import Path
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -66,3 +68,15 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+
+if __name__ == "__main__":
+    import uvicorn
+
+    settings = get_settings()
+    uvicorn.run(
+        "app.main:app",
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.debug,
+        app_dir=str(Path(__file__).resolve().parents[1]),
+    )
