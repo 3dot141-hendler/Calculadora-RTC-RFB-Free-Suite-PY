@@ -23,6 +23,40 @@ input[data-br-money] {
   text-align: right;
 }
 
+/* Células de tabela com texto truncado em 1 linha (balão flutuante mostra texto completo) */
+.text-ellipsis-cell {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Balão flutuante para frases que não cabem na linha */
+.rtc-floating-tooltip {
+  position: fixed;
+  z-index: 2050;
+  pointer-events: none;
+  max-width: min(440px, calc(100vw - 24px));
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.45rem;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  white-space: normal;
+  word-break: break-word;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.rtc-floating-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Sidebar Flexível */
 .sidebar {
   width: var(--sidebar-width);
@@ -127,7 +161,8 @@ body.sidebar-mini .sidebar .brand-link {
   .sidebar,
   .topbar,
   form,
-  .card-header {
+  .card-header,
+  .rtc-floating-tooltip {
     display: none !important;
   }
 }

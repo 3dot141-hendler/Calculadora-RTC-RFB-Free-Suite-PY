@@ -7,6 +7,10 @@
 
   const FEATURED_CODES = ["000001", "200028", "200003", "410001"];
 
+  function getTodayIso() {
+    return window.BrNumber ? window.BrNumber.getTodayIso() : new Date().toISOString().slice(0, 10);
+  }
+
   function truncate(text, maxLen = 62) {
     const clean = String(text ?? "").trim();
     return clean.length > maxLen ? `${clean.slice(0, maxLen - 1)}…` : clean;
@@ -16,6 +20,26 @@
     const redIbs = Number(item.aliquota_reducao_ibs) || 0;
     const redTag = redIbs > 0 ? ` [Red. ${redIbs.toFixed(0)}%]` : "";
     return `${item.c_class_trib} — ${truncate(item.descricao)}${redTag}`;
+  }
+
+  function formatFullLabel(item) {
+    const redIbs = Number(item.aliquota_reducao_ibs) || 0;
+    const redCbs = Number(item.aliquota_reducao_cbs) || 0;
+    const redTag =
+      redIbs > 0 || redCbs > 0
+        ? ` [Red. IBS ${redIbs.toFixed(0)}% / CBS ${redCbs.toFixed(0)}%]`
+        : " [Tributação integral]";
+    return `CST ${item.cst} | ${item.c_class_trib} — ${String(item.descricao ?? "").trim()}${redTag}`;
+  }
+
+  function buildOption(item) {
+    const opt = document.createElement("option");
+    const full = formatFullLabel(item);
+    opt.value = item.c_class_trib;
+    opt.textContent = formatOptionLabel(item);
+    opt.dataset.fullText = full;
+    opt.title = full;
+    return opt;
   }
 
   function populateSelect(selectEl, items) {
@@ -29,11 +53,7 @@
     featuredGroup.label = "Principais Classificações (Atalhos)";
     FEATURED_CODES.forEach((code) => {
       const item = byCode.get(code);
-      if (!item) return;
-      const opt = document.createElement("option");
-      opt.value = item.c_class_trib;
-      opt.textContent = formatOptionLabel(item);
-      featuredGroup.appendChild(opt);
+      if (item) featuredGroup.appendChild(buildOption(item));
     });
     if (featuredGroup.children.length) {
       selectEl.appendChild(featuredGroup);
@@ -51,12 +71,7 @@
       .forEach((cst) => {
         const group = document.createElement("optgroup");
         group.label = `CST ${cst} (LC 214/2025)`;
-        groupedByCst.get(cst).forEach((item) => {
-          const opt = document.createElement("option");
-          opt.value = item.c_class_trib;
-          opt.textContent = formatOptionLabel(item);
-          group.appendChild(opt);
-        });
+        groupedByCst.get(cst).forEach((item) => group.appendChild(buildOption(item)));
         selectEl.appendChild(group);
       });
 
@@ -71,7 +86,8 @@
     if (!compSelect && !prSelect) return;
 
     try {
-      const res = await fetch("/api/v1/tabelas/cst?data_fato_gerador=2026-06-01");
+      const today = encodeURIComponent(getTodayIso());
+      const res = await fetch(`/api/v1/tabelas/cst?data_fato_gerador=${today}`);
       if (!res.ok) return;
       const items = await res.json();
       if (!Array.isArray(items) || !items.length) return;

@@ -4,100 +4,107 @@
 (function (window, document) {
   "use strict";
 
-  const ENDPOINTS = {
-    comparador: {
-      method: "POST",
-      path: "/api/v1/comparador/simular",
-      payload: {
-        receita_bruta_12m: "720000.00",
-        valor_operacao: "50000.00",
-        anexo: "I",
-        data_fato_gerador: "2026-06-01",
-        uf: "SP",
-        c_class_trib: "000001",
-        creditos_anteriores: "4500.00",
-        percentual_vendas_b2b: "100.00",
+  function getTodayIso() {
+    return window.BrNumber ? window.BrNumber.getTodayIso() : new Date().toISOString().slice(0, 10);
+  }
+
+  function buildEndpoints() {
+    const today = getTodayIso();
+    return {
+      comparador: {
+        method: "POST",
+        path: "/api/v1/comparador/simular",
+        payload: {
+          receita_bruta_12m: "720000.00",
+          valor_operacao: "50000.00",
+          anexo: "I",
+          data_fato_gerador: today,
+          uf: "RS",
+          c_class_trib: "000001",
+          creditos_anteriores: "4500.00",
+          percentual_vendas_b2b: "100.00",
+        },
       },
-    },
-    "presumido-real": {
-      method: "POST",
-      path: "/api/v1/comparador/presumido-vs-real",
-      payload: {
-        receita_bruta_mensal: "600000.00",
-        despesas_dedutiveis_mensais: "552000.00",
-        atividade: "COMERCIO_INDUSTRIA",
-        data_fato_gerador: "2026-06-01",
-        uf: "SP",
-        c_class_trib: "000001",
-        creditos_ibs_cbs: "75000.00",
+      "presumido-real": {
+        method: "POST",
+        path: "/api/v1/comparador/presumido-vs-real",
+        payload: {
+          receita_bruta_mensal: "600000.00",
+          despesas_dedutiveis_mensais: "552000.00",
+          atividade: "COMERCIO_INDUSTRIA",
+          data_fato_gerador: today,
+          uf: "RS",
+          c_class_trib: "000001",
+          creditos_ibs_cbs: "75000.00",
+        },
       },
-    },
-    "simples-das": {
-      method: "POST",
-      path: "/api/v1/simples/calcular",
-      payload: {
-        receita_bruta_12m: "360000.00",
-        valor_operacao: "15000.00",
-        anexo: "III",
-        recolher_ibs_cbs_por_fora: false,
+      "simples-das": {
+        method: "POST",
+        path: "/api/v1/simples/calcular",
+        payload: {
+          receita_bruta_12m: "360000.00",
+          valor_operacao: "15000.00",
+          anexo: "III",
+          recolher_ibs_cbs_por_fora: false,
+        },
       },
-    },
-    "simples-item": {
-      method: "POST",
-      path: "/api/v1/simples/calcular-item",
-      payload: {
-        regime: "CRT_1",
-        data_fato_gerador: "2026-06-01",
-        tp_rbsn: 1,
-        c_ativ_sn_valido: true,
-        base_calculo: "1000.00",
-        p_ibs_sn: "1.50",
-        p_cbs_sn: "0.90",
+      "simples-item": {
+        method: "POST",
+        path: "/api/v1/simples/calcular-item",
+        payload: {
+          regime: "CRT_1",
+          data_fato_gerador: today,
+          tp_rbsn: 1,
+          c_ativ_sn_valido: true,
+          base_calculo: "1000.00",
+          p_ibs_sn: "1.50",
+          p_cbs_sn: "0.90",
+        },
       },
-    },
-    "regime-operacao": {
-      method: "POST",
-      path: "/api/v1/regime-regular/calcular-operacao",
-      payload: {
-        data_fato_gerador: "2026-06-01",
-        uf: "SP",
-        itens: [
-          {
-            codigo_item: "PROD-01",
-            valor_base: "1000.00",
-            c_class_trib: "000001",
-            aliquota_ibs_mun: "0.00",
-          },
-          {
-            codigo_item: "SERV-EDUC",
-            valor_base: "1000.00",
-            c_class_trib: "200028",
-            aliquota_ibs_mun: "0.00",
-            percentual_diferimento: "50.00",
-          },
-        ],
+      "regime-operacao": {
+        method: "POST",
+        path: "/api/v1/regime-regular/calcular-operacao",
+        payload: {
+          data_fato_gerador: today,
+          uf: "RS",
+          itens: [
+            {
+              codigo_item: "PROD-01",
+              valor_base: "1000.00",
+              c_class_trib: "000001",
+              aliquota_ibs_mun: "0.00",
+            },
+            {
+              codigo_item: "SERV-EDUC",
+              valor_base: "1000.00",
+              c_class_trib: "200028",
+              aliquota_ibs_mun: "0.00",
+              percentual_diferimento: "50.00",
+            },
+          ],
+        },
       },
-    },
-    "danfse-preview": {
-      method: "POST",
-      path: "/api/v1/danfse/preview",
-      payload: {
-        numero_nfse: "2026000142",
-        prestador_cnpj: "11222333000181",
-        tomador_documento: "98765432000199",
-        discriminacao_servico: "Consultoria em adequação fiscal RTC (IBS/CBS)",
-        valor_servicos: "5000.00",
-        valor_ibs: "500.00",
-        valor_cbs: "440.00",
-        situacao_stc: 0,
+      "danfse-preview": {
+        method: "POST",
+        path: "/api/v1/danfse/preview",
+        payload: {
+          numero_nfse: "2026000142",
+          prestador_cnpj: "11222333000181",
+          tomador_documento: "98765432000199",
+          discriminacao_servico: "Consultoria em adequação fiscal RTC (IBS/CBS)",
+          valor_servicos: "5000.00",
+          valor_ibs: "500.00",
+          valor_cbs: "440.00",
+          situacao_stc: 0,
+        },
       },
-    },
-    "tabelas-ibge": {
-      method: "GET",
-      path: "/api/v1/tabelas/localidades?uf=SP&nome=Paulo&limit=5",
-      payload: null,
-    },
-  };
+      "tabelas-ibge": {
+        method: "GET",
+        path: "/api/v1/tabelas/localidades?uf=RS&nome=Porto&limit=5",
+        payload: null,
+      },
+    };
+  }
 
   function buildCurl(baseUrl, ep) {
     const url = `${baseUrl}${ep.path}`;
@@ -195,8 +202,8 @@
     ].join("\n");
   }
 
-  function generateSnippet(lang, baseUrl, endpointKey) {
-    const ep = ENDPOINTS[endpointKey] || ENDPOINTS.comparador;
+  function generateSnippet(lang, baseUrl, endpointKey, endpoints) {
+    const ep = endpoints[endpointKey] || endpoints.comparador;
     const normalizedBase = (baseUrl || window.location.origin).replace(/\/+$/, "");
     if (lang === "python") return buildPython(normalizedBase, ep);
     if (lang === "javascript") return buildJavaScript(normalizedBase, ep);
@@ -218,6 +225,7 @@
 
     if (!endpointSelect || !baseUrlInput || !snippetCode) return;
 
+    const endpoints = buildEndpoints();
     let currentLang = "curl";
     baseUrlInput.value = window.location.origin;
 
@@ -225,7 +233,8 @@
       snippetCode.textContent = generateSnippet(
         currentLang,
         baseUrlInput.value,
-        endpointSelect.value
+        endpointSelect.value,
+        endpoints
       );
     }
 
@@ -257,7 +266,7 @@
     });
 
     testBtn?.addEventListener("click", async () => {
-      const ep = ENDPOINTS[endpointSelect.value] || ENDPOINTS.comparador;
+      const ep = endpoints[endpointSelect.value] || endpoints.comparador;
       const t0 = performance.now();
       liveMeta.className = "badge text-bg-secondary";
       liveMeta.textContent = "Executando...";

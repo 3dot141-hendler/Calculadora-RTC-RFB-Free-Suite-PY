@@ -126,6 +126,14 @@ def test_assets_catalogo_comparador_e_limite_de_linhas(client: TestClient) -> No
     assert res_js.status_code == 200
     assert "no-cache" in res_js.headers.get("cache-control", "")
 
+    res_tip = client.get("/assets/js/overflow-tooltip.js")
+    assert res_tip.status_code == 200
+    assert "no-cache" in res_tip.headers.get("cache-control", "")
+
+    res_index = client.get("/")
+    assert res_index.status_code == 200
+    assert "overflow-tooltip.js" in res_index.text
+
     root = Path(__file__).resolve().parents[2]
     checked = [
         root / "scripts" / "sync_rfb_sqlite.py",
@@ -135,6 +143,8 @@ def test_assets_catalogo_comparador_e_limite_de_linhas(client: TestClient) -> No
         root / "frontend" / "partials" / "tabelas.html",
         root / "frontend" / "assets" / "js" / "modules" / "tabelas.js",
         root / "frontend" / "assets" / "js" / "modules" / "comparador-catalog.js",
+        root / "frontend" / "assets" / "js" / "overflow-tooltip.js",
+        root / "frontend" / "assets" / "css" / "style.css",
         root / "frontend" / "partials" / "comparador.html",
         root / "frontend" / "partials" / "regime-regular.html",
     ]

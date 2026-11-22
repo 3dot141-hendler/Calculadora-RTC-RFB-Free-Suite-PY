@@ -1,9 +1,41 @@
 /**
  * BrNumber - Formatação e conversão de números/moedas no padrão PT-BR (1.234.567,89)
- * para strings decimais padrão ISO/API ("1234567.89") compatíveis com Decimal no Python.
+ * para strings decimais padrão ISO/API ("1234567.89") compatíveis com Decimal no Python,
+ * além de helpers de data local atual (produção).
  */
 (function (window, document) {
   "use strict";
+
+  /**
+   * Retorna a data local atual do usuário em formato ISO ("YYYY-MM-DD").
+   */
+  function getTodayIso() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Preenche inputs [data-default-today] com a data atual e [data-default-year] com o ano atual.
+   */
+  function applyDefaultTodayDates(root = document) {
+    const today = getTodayIso();
+    const currentYear = String(new Date().getFullYear());
+
+    root.querySelectorAll("input[type='date'][data-default-today]").forEach((input) => {
+      if (input.dataset.todayApplied === "true") return;
+      input.dataset.todayApplied = "true";
+      input.value = today;
+    });
+
+    root.querySelectorAll("input[data-default-year]").forEach((input) => {
+      if (input.dataset.yearApplied === "true") return;
+      input.dataset.yearApplied = "true";
+      input.value = currentYear;
+    });
+  }
 
   /**
    * Converte entrada PT-BR ("720.000,00", "600.000", "50,5") ou ISO ("720000.00")
@@ -90,7 +122,14 @@
     });
   }
 
+  // Registrado antes dos módulos para garantir data atual pronta no carregamento de cada partial
+  document.addEventListener("partial:loaded", () => {
+    applyDefaultTodayDates(document);
+  });
+
   window.BrNumber = {
+    getTodayIso,
+    applyDefaultTodayDates,
     parseToApiDecimal,
     formatBrDecimal,
     attachMoneyInputs,

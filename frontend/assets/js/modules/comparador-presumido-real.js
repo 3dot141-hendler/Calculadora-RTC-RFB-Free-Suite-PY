@@ -9,7 +9,7 @@
       receita_bruta_mensal: "500000.00",
       despesas_dedutiveis_mensais: "275000.00",
       atividade: "SERVICOS_GERAIS",
-      uf: "SP",
+      uf: "RS",
       c_class_trib: "000001",
       creditos_ibs_cbs: "14000.00",
       aliquota_ibs_mun: "0.00",
@@ -19,7 +19,7 @@
       receita_bruta_mensal: "600000.00",
       despesas_dedutiveis_mensais: "576000.00",
       atividade: "COMERCIO_INDUSTRIA",
-      uf: "SP",
+      uf: "RS",
       c_class_trib: "000001",
       creditos_ibs_cbs: "80000.00",
       aliquota_ibs_mun: "0.00",
@@ -29,13 +29,17 @@
       receita_bruta_mensal: "900000.00",
       despesas_dedutiveis_mensais: "765000.00",
       atividade: "SERVICOS_HOSPITALARES",
-      uf: "SP",
+      uf: "RS",
       c_class_trib: "200028",
       creditos_ibs_cbs: "18000.00",
       aliquota_ibs_mun: "0.00",
       aliquota_is: "0.00",
     },
   };
+
+  function getTodayIso() {
+    return window.BrNumber ? window.BrNumber.getTodayIso() : new Date().toISOString().slice(0, 10);
+  }
 
   function formatBRL(value) {
     const num = Number(value);
@@ -61,7 +65,8 @@
 
   function readVal(form, name, fallback = "") {
     const el = form.elements.namedItem(name);
-    return el ? String(el.value ?? "").trim() : fallback;
+    const val = el ? String(el.value ?? "").trim() : "";
+    return val || fallback;
   }
 
   function applyPreset(form, key) {
@@ -76,6 +81,10 @@
         el.value = val;
       }
     });
+    const dateEl = form.elements.namedItem("data_fato_gerador");
+    if (dateEl && !dateEl.value) {
+      dateEl.value = getTodayIso();
+    }
   }
 
   function setPrintButtonState(enabled) {
@@ -273,8 +282,8 @@
       receita_bruta_mensal: readNum(form, "receita_bruta_mensal", "0.00"),
       despesas_dedutiveis_mensais: readNum(form, "despesas_dedutiveis_mensais", "0.00"),
       atividade: readVal(form, "atividade", "COMERCIO_INDUSTRIA"),
-      data_fato_gerador: readVal(form, "data_fato_gerador", "2026-06-01"),
-      uf: readVal(form, "uf", "SP"),
+      data_fato_gerador: readVal(form, "data_fato_gerador", getTodayIso()),
+      uf: readVal(form, "uf", "RS"),
       c_class_trib: readVal(form, "c_class_trib", "000001"),
       aliquota_ibs_mun: readNum(form, "aliquota_ibs_mun", "0.00"),
       aliquota_is: readNum(form, "aliquota_is", "0.00"),
@@ -329,6 +338,7 @@
     const printBtn = document.getElementById("presumidoRealPrintBtn");
     if (!form || !container) return;
 
+    window.BrNumber?.applyDefaultTodayDates(form);
     window.BrNumber?.attachMoneyInputs(form);
 
     if (printBtn) {

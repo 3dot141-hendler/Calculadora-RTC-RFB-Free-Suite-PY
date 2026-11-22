@@ -6,10 +6,11 @@
 
   const API_BASE = "/api/v1/tabelas";
 
-  function createCell(text, className = "") {
+  function createCell(text, className = "", fullTooltip = "") {
     const td = document.createElement("td");
     if (className) td.className = className;
     td.textContent = text ?? "-";
+    if (fullTooltip) td.dataset.tooltipFull = fullTooltip;
     return td;
   }
 
@@ -51,7 +52,7 @@
       tr.append(
         createCell(item.cst, "fw-semibold"),
         createCell(item.c_class_trib, "text-nowrap"),
-        createCell(item.descricao, "small"),
+        createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
         createCell(
           `${formatPctLabel(item.aliquota_reducao_ibs)} / ${formatPctLabel(item.aliquota_reducao_cbs)}`,
           "text-end small text-nowrap"
@@ -82,7 +83,7 @@
         const tr = document.createElement("tr");
         tr.append(
           createCell(item.codigo, "fw-semibold"),
-          createCell(item.descricao, "small"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
           createCell(item.anexo_sem_fator_r || "Sem anexo", "text-nowrap"),
           createCell(item.anexo_com_fator_r || "-", "text-nowrap")
         );
@@ -99,7 +100,7 @@
         const tr = document.createElement("tr");
         tr.append(
           createCell(item.uf, "fw-semibold"),
-          createCell(item.nome, "small"),
+          createCell(item.nome, "small text-ellipsis-cell", item.nome),
           createCell(formatPctLabel(item.aliquota_ibs_uf), "text-end small text-nowrap"),
           createCell(formatPctLabel(item.aliquota_cbs), "text-end small text-nowrap")
         );
@@ -135,7 +136,7 @@
       const tr = document.createElement("tr");
       tr.append(
         createCell(String(loc.codigo_ibge), "fw-semibold"),
-        createCell(loc.nome),
+        createCell(loc.nome, "text-ellipsis-cell", loc.nome),
         createCell(loc.uf_sigla),
         createCell(String(loc.uf_codigo), "text-muted")
       );
@@ -149,6 +150,7 @@
     const form = document.getElementById("tabelasFilterForm");
     const dateInput = document.getElementById("tabelasDataVigencia");
     if (form && dateInput) {
+      window.BrNumber?.applyDefaultTodayDates(form);
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         carregarTabelas(dateInput.value);
@@ -174,7 +176,7 @@
         e.preventDefault();
         buscarLocalidades(locUf.value, locNome.value);
       });
-      buscarLocalidades("", "");
+      buscarLocalidades("RS", "");
     }
   });
 })(window, document);

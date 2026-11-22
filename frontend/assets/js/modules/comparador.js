@@ -9,7 +9,7 @@
       receita_bruta_12m: "720000.00",
       valor_operacao: "50000.00",
       anexo: "I",
-      uf: "SP",
+      uf: "RS",
       c_class_trib: "000001",
       creditos_anteriores: "4500.00",
       aliquota_ibs_mun: "0.00",
@@ -20,7 +20,7 @@
       receita_bruta_12m: "1200000.00",
       valor_operacao: "30000.00",
       anexo: "III",
-      uf: "SP",
+      uf: "RS",
       c_class_trib: "000001",
       creditos_anteriores: "600.00",
       aliquota_ibs_mun: "0.00",
@@ -31,7 +31,7 @@
       receita_bruta_12m: "1800000.00",
       valor_operacao: "40000.00",
       anexo: "V",
-      uf: "SP",
+      uf: "RS",
       c_class_trib: "200028",
       creditos_anteriores: "1200.00",
       aliquota_ibs_mun: "0.00",
@@ -39,6 +39,10 @@
       percentual_vendas_b2b: "50.00",
     },
   };
+
+  function getTodayIso() {
+    return window.BrNumber ? window.BrNumber.getTodayIso() : new Date().toISOString().slice(0, 10);
+  }
 
   function formatBRL(value) {
     const num = Number(value);
@@ -64,7 +68,8 @@
 
   function readField(form, name, fallback = "") {
     const el = form.elements.namedItem(name);
-    return el ? String(el.value ?? "").trim() : fallback;
+    const val = el ? String(el.value ?? "").trim() : "";
+    return val || fallback;
   }
 
   function applyPreset(form, presetKey) {
@@ -79,6 +84,10 @@
         el.value = val;
       }
     });
+    const dateEl = form.elements.namedItem("data_fato_gerador");
+    if (dateEl && !dateEl.value) {
+      dateEl.value = getTodayIso();
+    }
   }
 
   function formatValidationError(detail) {
@@ -287,8 +296,8 @@
       receita_bruta_12m: readNumberField(form, "receita_bruta_12m", "0.00"),
       valor_operacao: readNumberField(form, "valor_operacao", "0.00"),
       anexo: readField(form, "anexo", "I"),
-      data_fato_gerador: readField(form, "data_fato_gerador", "2026-06-01"),
-      uf: readField(form, "uf", "SP"),
+      data_fato_gerador: readField(form, "data_fato_gerador", getTodayIso()),
+      uf: readField(form, "uf", "RS"),
       c_class_trib: readField(form, "c_class_trib", "000001"),
       aliquota_ibs_mun: readNumberField(form, "aliquota_ibs_mun", "0.00"),
       aliquota_is: readNumberField(form, "aliquota_is", "0.00"),
@@ -349,6 +358,7 @@
     const printBtn = document.getElementById("comparadorPrintBtn");
     if (!form || !container) return;
 
+    window.BrNumber?.applyDefaultTodayDates(form);
     window.BrNumber?.attachMoneyInputs(form);
 
     if (printBtn) {

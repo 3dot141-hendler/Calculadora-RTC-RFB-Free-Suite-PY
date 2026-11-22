@@ -59,7 +59,7 @@
         <form id="baseCalculoCibsForm" class="row g-3" novalidate>
           <div class="col-md-3">
             <label for="ano_fato_gerador" class="form-label">Ano Fato Gerador</label>
-            <input type="number" min="2000" max="2100" class="form-control" id="ano_fato_gerador" name="ano_fato_gerador" value="2026" required />
+            <input type="number" min="2000" max="2100" data-default-year class="form-control" id="ano_fato_gerador" name="ano_fato_gerador" required />
           </div>
           <div class="col-md-3">
             <label for="valor_bem" class="form-label">Valor do Bem (R$)</label>
@@ -107,7 +107,7 @@
         <form id="operacaoRegimeRegularForm" class="row g-3" novalidate>
           <div class="col-md-4">
             <label for="op_data" class="form-label">Data Fato Gerador</label>
-            <input type="date" class="form-control form-control-sm" id="op_data" name="op_data" value="2026-06-01" required />
+            <input type="date" data-default-today class="form-control form-control-sm" id="op_data" name="op_data" required />
           </div>
           <div class="col-md-4">
             <label for="op_uf" class="form-label">UF Destino</label>
