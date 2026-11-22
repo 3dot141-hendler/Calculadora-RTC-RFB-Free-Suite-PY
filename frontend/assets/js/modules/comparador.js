@@ -14,7 +14,7 @@
       creditos_anteriores: "4500.00",
       aliquota_ibs_mun: "0.00",
       aliquota_is: "0.00",
-      percentual_vendas_b2b: "100",
+      percentual_vendas_b2b: "100.00",
     },
     "servicos-ti": {
       receita_bruta_12m: "1200000.00",
@@ -25,7 +25,7 @@
       creditos_anteriores: "600.00",
       aliquota_ibs_mun: "0.00",
       aliquota_is: "0.00",
-      percentual_vendas_b2b: "100",
+      percentual_vendas_b2b: "100.00",
     },
     "saude-red60": {
       receita_bruta_12m: "1800000.00",
@@ -36,7 +36,7 @@
       creditos_anteriores: "1200.00",
       aliquota_ibs_mun: "0.00",
       aliquota_is: "0.00",
-      percentual_vendas_b2b: "50",
+      percentual_vendas_b2b: "50.00",
     },
   };
 
@@ -55,6 +55,9 @@
   function readNumberField(form, name, fallback = "0.00") {
     const el = form.elements.namedItem(name);
     if (!el) return fallback;
+    if (window.BrNumber) {
+      return window.BrNumber.parseToApiDecimal(el.value, fallback);
+    }
     const raw = String(el.value ?? "").trim().replace(",", ".");
     return raw === "" ? fallback : raw;
   }
@@ -69,7 +72,12 @@
     if (!preset) return;
     Object.entries(preset).forEach(([field, val]) => {
       const el = form.elements.namedItem(field);
-      if (el) el.value = val;
+      if (!el) return;
+      if (el.hasAttribute("data-br-money") && window.BrNumber) {
+        el.value = window.BrNumber.formatBrDecimal(val, 2);
+      } else {
+        el.value = val;
+      }
     });
   }
 
@@ -314,6 +322,8 @@
     const form = document.getElementById("comparadorForm");
     const container = document.getElementById("comparadorResultadoArea");
     if (!form || !container) return;
+
+    window.BrNumber?.attachMoneyInputs(form);
 
     document.querySelectorAll("[data-preset]").forEach((btn) => {
       btn.addEventListener("click", () => {

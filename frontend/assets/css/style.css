@@ -16,6 +16,13 @@ body {
   overflow-x: hidden;
 }
 
+/* Padronização tipográfica para campos numéricos PT-BR em toda a suíte */
+input[data-br-money] {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* Sidebar Flexível */
 .sidebar {
   width: var(--sidebar-width);
@@ -124,4 +131,3 @@ body.sidebar-mini .sidebar .brand-link {
     display: none !important;
   }
 }
-

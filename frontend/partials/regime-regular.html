@@ -8,34 +8,34 @@
         <span class="badge text-bg-primary">POST /api/v1/regime-regular/calcular</span>
       </div>
       <div class="card-body">
-        <form id="regimeRegularForm" class="row g-3">
+        <form id="regimeRegularForm" class="row g-3" novalidate>
           <div class="col-md-4">
             <label for="valor_operacao_rr" class="form-label">Valor da Operação (R$)</label>
-            <input type="number" step="0.01" min="0.01" class="form-control" id="valor_operacao_rr" name="valor_operacao" value="1000.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_operacao_rr" name="valor_operacao" value="1.000,00" required />
           </div>
           <div class="col-md-4">
             <label for="aliquota_ibs_uf" class="form-label">Alíquota IBS Estadual (%)</label>
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="aliquota_ibs_uf" name="aliquota_ibs_uf" value="10.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="aliquota_ibs_uf" name="aliquota_ibs_uf" value="10,00" required />
           </div>
           <div class="col-md-4">
             <label for="aliquota_ibs_mun" class="form-label">Alíquota IBS Municipal (%)</label>
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="aliquota_ibs_mun" name="aliquota_ibs_mun" value="7.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="aliquota_ibs_mun" name="aliquota_ibs_mun" value="7,00" required />
           </div>
           <div class="col-md-3">
             <label for="aliquota_cbs" class="form-label">Alíquota CBS (%)</label>
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="aliquota_cbs" name="aliquota_cbs" value="8.80" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="aliquota_cbs" name="aliquota_cbs" value="8,80" required />
           </div>
           <div class="col-md-3">
             <label for="aliquota_is" class="form-label">Alíquota IS (%)</label>
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="aliquota_is" name="aliquota_is" value="0.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="aliquota_is" name="aliquota_is" value="0,00" required />
           </div>
           <div class="col-md-3">
             <label for="percentual_reducao" class="form-label">Redução (%)</label>
-            <input type="number" step="0.01" min="0" max="100" class="form-control" id="percentual_reducao" name="percentual_reducao" value="0.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="percentual_reducao" name="percentual_reducao" value="0,00" required />
           </div>
           <div class="col-md-3">
             <label for="creditos_anteriores" class="form-label">Créditos (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="creditos_anteriores" name="creditos_anteriores" value="0.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="creditos_anteriores" name="creditos_anteriores" value="0,00" required />
           </div>
           <div class="col-12">
             <button type="submit" class="btn btn-primary">
@@ -56,34 +56,34 @@
         <span class="badge text-bg-primary">POST /api/v1/regime-regular/base-calculo/cbs-ibs</span>
       </div>
       <div class="card-body">
-        <form id="baseCalculoCibsForm" class="row g-3">
+        <form id="baseCalculoCibsForm" class="row g-3" novalidate>
           <div class="col-md-3">
             <label for="ano_fato_gerador" class="form-label">Ano Fato Gerador</label>
             <input type="number" min="2000" max="2100" class="form-control" id="ano_fato_gerador" name="ano_fato_gerador" value="2026" required />
           </div>
           <div class="col-md-3">
             <label for="valor_bem" class="form-label">Valor do Bem (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="valor_bem" name="valor_bem" value="1000.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_bem" name="valor_bem" value="1.000,00" required />
           </div>
           <div class="col-md-3">
             <label for="frete" class="form-label">Frete (+) (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="frete" name="frete" value="100.00" />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="frete" name="frete" value="100,00" />
           </div>
           <div class="col-md-3">
             <label for="imposto_seletivo" class="form-label">IS (+) (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="imposto_seletivo" name="imposto_seletivo" value="50.00" />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="imposto_seletivo" name="imposto_seletivo" value="50,00" />
           </div>
           <div class="col-md-4">
             <label for="icms" class="form-label">ICMS (-) (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="icms" name="icms" value="180.00" />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="icms" name="icms" value="180,00" />
           </div>
           <div class="col-md-4">
             <label for="pis" class="form-label">PIS (-) (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="pis" name="pis" value="16.50" />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="pis" name="pis" value="16,50" />
           </div>
           <div class="col-md-4">
             <label for="desconto_incondicional" class="form-label">Desconto Incond. (-) (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="desconto_incondicional" name="desconto_incondicional" value="20.00" />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="desconto_incondicional" name="desconto_incondicional" value="20,00" />
           </div>
           <div class="col-12">
             <button type="submit" class="btn btn-outline-primary">
@@ -104,7 +104,7 @@
         <span class="badge text-bg-primary">POST /api/v1/regime-regular/calcular-operacao</span>
       </div>
       <div class="card-body">
-        <form id="operacaoRegimeRegularForm" class="row g-3">
+        <form id="operacaoRegimeRegularForm" class="row g-3" novalidate>
           <div class="col-md-4">
             <label for="op_data" class="form-label">Data Fato Gerador</label>
             <input type="date" class="form-control form-control-sm" id="op_data" name="op_data" value="2026-06-01" required />
@@ -152,4 +152,3 @@
     </div>
   </div>
 </section>
-

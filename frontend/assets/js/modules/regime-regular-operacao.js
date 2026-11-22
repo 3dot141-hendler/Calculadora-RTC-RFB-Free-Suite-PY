@@ -11,11 +11,19 @@
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
-  function createItemRow(codigo = "ITEM-01", valor = "1000.00", cClass = "000001", dif = "0.00") {
+  function toApiNum(raw, fallback = "0.00") {
+    if (window.BrNumber) {
+      return window.BrNumber.parseToApiDecimal(raw, fallback);
+    }
+    const cleaned = String(raw ?? "").trim().replace(",", ".");
+    return cleaned === "" ? fallback : cleaned;
+  }
+
+  function createItemRow(codigo = "ITEM-01", valor = "1.000,00", cClass = "000001", dif = "0,00") {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="text" class="form-control form-control-sm op-codigo" value="${codigo}" required /></td>
-      <td><input type="number" step="0.01" min="0.01" class="form-control form-control-sm op-valor" value="${valor}" required /></td>
+      <td><input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm op-valor" value="${valor}" required /></td>
       <td>
         <select class="form-select form-select-sm op-cclasstrib">
           <option value="000001" ${cClass === "000001" ? "selected" : ""}>000001 (Integral)</option>
@@ -23,13 +31,14 @@
           <option value="200003" ${cClass === "200003" ? "selected" : ""}>200003 (Zero)</option>
         </select>
       </td>
-      <td><input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm op-dif" value="${dif}" /></td>
+      <td><input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm op-dif" value="${dif}" /></td>
       <td class="text-end">
         <button type="button" class="btn btn-sm btn-outline-danger op-remove" title="Remover item">
           <i class="bi bi-trash"></i>
         </button>
       </td>
     `;
+    window.BrNumber?.attachMoneyInputs(tr);
     tr.querySelector(".op-remove").addEventListener("click", () => {
       if (tr.parentElement && tr.parentElement.children.length > 1) {
         tr.remove();
@@ -48,23 +57,23 @@
     if (!tbody || !addBtn || !form || !resultEl) return;
 
     tbody.replaceChildren(
-      createItemRow("ITEM-01", "1000.00", "000001", "0.00"),
-      createItemRow("ITEM-02", "1000.00", "200028", "50.00")
+      createItemRow("ITEM-01", "1.000,00", "000001", "0,00"),
+      createItemRow("ITEM-02", "1.000,00", "200028", "50,00")
     );
 
     addBtn.addEventListener("click", () => {
       const idx = tbody.children.length + 1;
-      tbody.appendChild(createItemRow(`ITEM-0${idx}`, "500.00", "000001", "0.00"));
+      tbody.appendChild(createItemRow(`ITEM-0${idx}`, "500,00", "000001", "0,00"));
     });
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const itens = Array.from(tbody.querySelectorAll("tr")).map((row) => ({
         codigo_item: row.querySelector(".op-codigo").value,
-        valor_base: row.querySelector(".op-valor").value,
+        valor_base: toApiNum(row.querySelector(".op-valor").value),
         c_class_trib: row.querySelector(".op-cclasstrib").value,
         aliquota_ibs_mun: "0.00",
-        percentual_diferimento: row.querySelector(".op-dif").value || "0.00",
+        percentual_diferimento: toApiNum(row.querySelector(".op-dif").value, "0.00"),
       }));
 
       const payload = {
