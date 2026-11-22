@@ -10,10 +10,12 @@
 
   const ROUTE_TITLES = {
     dashboard: "Visão Geral",
+    comparador: "Comparador de Regimes (Simples vs. Híbrido vs. Regular)",
     simples: "Simples Nacional (RTC)",
     "regime-regular": "Regime Regular (IBS / CBS / IS)",
     danfse: "Gerador DANFSE",
     tabelas: "Tabelas Oficiais (RFB)",
+    "api-exemplos": "Exemplos de Integração (API REST)",
   };
 
   function updateActiveNav(route) {
@@ -103,4 +105,3 @@
     clearCache: () => partialCache.clear(),
   };
 })(window, document);
-

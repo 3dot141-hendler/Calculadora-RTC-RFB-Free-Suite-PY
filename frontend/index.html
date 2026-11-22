@@ -76,6 +76,22 @@
             <ul class="nav flex-column submenu-list ps-3 mt-1 gap-1" data-submenu-content="calculadoras">
               <li class="nav-item">
                 <a
+                  href="#comparador"
+                  class="nav-link text-white-50 d-flex align-items-center justify-content-between"
+                  data-route="comparador"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="right"
+                  data-bs-title="Comparador de Regimes"
+                >
+                  <span class="d-flex align-items-center gap-2">
+                    <i class="bi bi-columns-gap"></i>
+                    <span class="sidebar-label">Comparador</span>
+                  </span>
+                  <span class="badge text-bg-danger sidebar-label">B2B</span>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
                   href="#simples"
                   class="nav-link text-white-50 d-flex align-items-center justify-content-between"
                   data-route="simples"
@@ -162,6 +178,23 @@
               <span class="badge text-bg-info text-dark sidebar-label">SQLite</span>
             </a>
           </li>
+
+          <li class="nav-item">
+            <a
+              href="#api-exemplos"
+              class="nav-link text-white d-flex align-items-center justify-content-between"
+              data-route="api-exemplos"
+              data-bs-toggle="tooltip"
+              data-bs-placement="right"
+              data-bs-title="Exemplos API (Devs)"
+            >
+              <span class="d-flex align-items-center gap-2">
+                <i class="bi bi-code-square"></i>
+                <span class="sidebar-label">Exemplos API</span>
+              </span>
+              <span class="badge text-bg-secondary sidebar-label">REST</span>
+            </a>
+          </li>
         </ul>
       </nav>
 
@@ -233,6 +266,10 @@
           </p>
           <ul class="list-group list-group-flush mb-3">
             <li class="list-group-item d-flex justify-content-between align-items-center">
+              Comparador de Regimes (B2B / Híbrido)
+              <span class="badge text-bg-danger">/api/v1/comparador</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
               Simples Nacional (RTC)
               <span class="badge text-bg-success">/api/v1/simples</span>
             </li>
@@ -261,13 +298,14 @@
   ></script>
 
   <!-- Cache Buster primeiro para versionar assets e partials em runtime -->
-  <script src="assets/js/cache-buster.js"></script>
-  <script data-cache-bust src="assets/js/sidebar.js"></script>
-  <script data-cache-bust src="assets/js/router.js"></script>
-  <script data-cache-bust src="assets/js/modules/tabelas.js"></script>
-  <script data-cache-bust src="assets/js/modules/danfse.js"></script>
-  <script data-cache-bust src="assets/js/modules/regime-regular-operacao.js"></script>
-  <script data-cache-bust src="assets/js/app.js"></script>
+  <script src="assets/js/cache-buster.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/sidebar.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/router.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/modules/comparador.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/modules/api-exemplos.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/modules/tabelas.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/modules/danfse.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/modules/regime-regular-operacao.js?v=20261121c"></script>
+  <script data-cache-bust src="assets/js/app.js?v=20261121c"></script>
 </body>
 </html>
-
