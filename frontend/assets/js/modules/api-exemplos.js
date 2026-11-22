@@ -19,6 +19,19 @@
         percentual_vendas_b2b: "100.00",
       },
     },
+    "presumido-real": {
+      method: "POST",
+      path: "/api/v1/comparador/presumido-vs-real",
+      payload: {
+        receita_bruta_mensal: "600000.00",
+        despesas_dedutiveis_mensais: "552000.00",
+        atividade: "COMERCIO_INDUSTRIA",
+        data_fato_gerador: "2026-06-01",
+        uf: "SP",
+        c_class_trib: "000001",
+        creditos_ibs_cbs: "75000.00",
+      },
+    },
     "simples-das": {
       method: "POST",
       path: "/api/v1/simples/calcular",
