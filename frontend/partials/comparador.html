@@ -1,0 +1,177 @@
+<section class="row g-4" aria-label="Comparador Lado a Lado de Regimes Tributários RTC">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+        <div>
+          <h2 class="h5 mb-0 fw-bold">
+            <i class="bi bi-columns-gap text-primary me-2"></i>Comparador de Regimes: Simples vs. Híbrido vs. Regime Regular
+          </h2>
+          <small class="text-muted">
+            Simule carga tributária própria, aproveitamento de créditos de insumos e crédito gerado para clientes PJ (B2B).
+          </small>
+        </div>
+        <div class="d-flex flex-wrap gap-1" role="group" aria-label="Cenários rápidos">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="comercio-b2b">
+            <i class="bi bi-shop me-1"></i>Comércio B2B
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="servicos-ti">
+            <i class="bi bi-code-slash me-1"></i>Serviços TI
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="saude-red60">
+            <i class="bi bi-heart-pulse me-1"></i>Saúde (Red. 60%)
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <form id="comparadorForm" class="row g-3" novalidate>
+          <div class="col-md-3">
+            <label for="compRbt12" class="form-label small fw-semibold">RBT12 — Últimos 12 meses (R$)</label>
+            <input
+              id="compRbt12"
+              name="receita_bruta_12m"
+              type="number"
+              step="any"
+              min="0"
+              max="4800000"
+              value="720000.00"
+              class="form-control form-control-sm"
+              required
+            />
+            <div class="form-text" style="font-size: 0.72rem;">Faturamento acumulado 12m (define a faixa; teto R$ 4,8 mi).</div>
+          </div>
+
+          <div class="col-md-3">
+            <label for="compValorOp" class="form-label small fw-semibold">Valor da Operação / Venda (R$)</label>
+            <input
+              id="compValorOp"
+              name="valor_operacao"
+              type="number"
+              step="any"
+              min="0.01"
+              value="50000.00"
+              class="form-control form-control-sm"
+              required
+            />
+            <div class="form-text" style="font-size: 0.72rem;">Base da venda/nota simulada sobre a qual o imposto incide.</div>
+          </div>
+
+          <div class="col-md-2">
+            <label for="compAnexo" class="form-label small fw-semibold">Anexo LC 123</label>
+            <select id="compAnexo" name="anexo" class="form-select form-select-sm">
+              <option value="I" selected>Anexo I (Comércio)</option>
+              <option value="II">Anexo II (Indústria)</option>
+              <option value="III">Anexo III (Serviços)</option>
+              <option value="IV">Anexo IV (Serviços)</option>
+              <option value="V">Anexo V (Serviços)</option>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label for="compData" class="form-label small fw-semibold">Data Fato Gerador</label>
+            <input
+              id="compData"
+              name="data_fato_gerador"
+              type="date"
+              value="2026-06-01"
+              class="form-control form-control-sm"
+              required
+            />
+          </div>
+
+          <div class="col-md-2">
+            <label for="compUf" class="form-label small fw-semibold">UF Destino</label>
+            <select id="compUf" name="uf" class="form-select form-select-sm">
+              <option value="SP" selected>SP</option>
+              <option value="RJ">RJ</option>
+              <option value="MG">MG</option>
+              <option value="PR">PR</option>
+              <option value="RS">RS</option>
+              <option value="SC">SC</option>
+              <option value="BA">BA</option>
+              <option value="DF">DF</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label for="compCClass" class="form-label small fw-semibold">Classificação Tributária (cClassTrib)</label>
+            <select id="compCClass" name="c_class_trib" class="form-select form-select-sm">
+              <option value="000001" selected>000001 — Tributação Integral</option>
+              <option value="200028">200028 — Redução de 60% (Saúde/Educação)</option>
+              <option value="200003">200003 — Alíquota Zero (Cesta Básica)</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label for="compCreditos" class="form-label small fw-semibold">Créditos de Insumos IBS/CBS (R$)</label>
+            <input
+              id="compCreditos"
+              name="creditos_anteriores"
+              type="number"
+              step="any"
+              min="0"
+              value="4500.00"
+              class="form-control form-control-sm"
+            />
+            <div class="form-text" style="font-size: 0.72rem;">Informado pelo usuário (abatido no Híbrido e Regular).</div>
+          </div>
+
+          <div class="col-md-2">
+            <label for="compIbsMun" class="form-label small fw-semibold">IBS Municipal (%)</label>
+            <input
+              id="compIbsMun"
+              name="aliquota_ibs_mun"
+              type="number"
+              step="any"
+              min="0"
+              max="100"
+              value="0.00"
+              class="form-control form-control-sm"
+            />
+          </div>
+
+          <div class="col-md-2">
+            <label for="compIs" class="form-label small fw-semibold">Imposto Seletivo (%)</label>
+            <input
+              id="compIs"
+              name="aliquota_is"
+              type="number"
+              step="any"
+              min="0"
+              max="100"
+              value="0.00"
+              class="form-control form-control-sm"
+            />
+          </div>
+
+          <div class="col-md-2">
+            <label for="compB2b" class="form-label small fw-semibold">Vendas B2B / PJ (%)</label>
+            <input
+              id="compB2b"
+              name="percentual_vendas_b2b"
+              type="number"
+              step="any"
+              min="0"
+              max="100"
+              value="100"
+              class="form-control form-control-sm"
+            />
+          </div>
+
+          <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+            <span id="comparadorStatusText" class="small text-muted"></span>
+            <button id="comparadorSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
+              <i class="bi bi-calculator me-1"></i>Comparar Cenários Lado a Lado
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="comparadorResultadoArea" class="col-12">
+    <div class="alert alert-light border text-muted small mb-0">
+      <i class="bi bi-info-circle me-1"></i>Preencha os parâmetros e clique em <strong>Comparar Cenários Lado a Lado</strong>.
+    </div>
+  </div>
+</section>
