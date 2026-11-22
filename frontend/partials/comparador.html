@@ -1,35 +1,51 @@
 <section class="row g-4" aria-label="Comparador Lado a Lado de Regimes Tributários RTC">
   <div class="col-12">
-    <ul class="nav nav-pills gap-2 bg-white p-2 rounded shadow-sm border" id="comparadorTabs" role="tablist">
-      <li class="nav-item" role="presentation">
-        <button
-          class="nav-link active fw-semibold small"
-          id="tab-simples-regular-btn"
-          data-bs-toggle="pill"
-          data-bs-target="#paneSimplesRegular"
-          type="button"
-          role="tab"
-          aria-controls="paneSimplesRegular"
-          aria-selected="true"
-        >
-          <i class="bi bi-shop me-1"></i>Até R$ 4,8 mi/ano: Simples vs. Híbrido vs. Regular
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button
-          class="nav-link fw-semibold small"
-          id="tab-presumido-real-btn"
-          data-bs-toggle="pill"
-          data-bs-target="#panePresumidoReal"
-          type="button"
-          role="tab"
-          aria-controls="panePresumidoReal"
-          aria-selected="false"
-        >
-          <i class="bi bi-buildings me-1"></i>Geral / &gt; R$ 4,8 mi/ano: Lucro Presumido vs. Lucro Real
-        </button>
-      </li>
-    </ul>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white p-2 rounded shadow-sm border">
+      <ul class="nav nav-pills gap-2" id="comparadorTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active fw-semibold small"
+            id="tab-simples-regular-btn"
+            data-bs-toggle="pill"
+            data-bs-target="#paneSimplesRegular"
+            type="button"
+            role="tab"
+            aria-controls="paneSimplesRegular"
+            aria-selected="true"
+          >
+            <i class="bi bi-shop me-1"></i>Até R$ 4,8 mi/ano: Simples vs. Híbrido vs. Regular
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link fw-semibold small"
+            id="tab-presumido-real-btn"
+            data-bs-toggle="pill"
+            data-bs-target="#panePresumidoReal"
+            type="button"
+            role="tab"
+            aria-controls="panePresumidoReal"
+            aria-selected="false"
+          >
+            <i class="bi bi-buildings me-1"></i>Geral / &gt; R$ 4,8 mi/ano: Lucro Presumido vs. Lucro Real
+          </button>
+        </li>
+      </ul>
+
+      <div class="input-group input-group-sm" style="max-width: 280px;">
+        <span class="input-group-text bg-light text-muted" title="Opcional: exibido no cabeçalho do Relatório PDF">
+          <i class="bi bi-person-badge"></i>
+        </span>
+        <input
+          id="comparadorClienteNome"
+          type="text"
+          maxlength="80"
+          class="form-control form-control-sm"
+          placeholder="Empresa / Cliente (opcional no PDF)"
+          aria-label="Nome da Empresa ou Cliente para o Relatório PDF"
+        />
+      </div>
+    </div>
   </div>
 
   <div class="col-12 tab-content" id="comparadorTabContent">
@@ -126,9 +142,14 @@
                 </div>
                 <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
                   <span id="comparadorStatusText" class="small text-muted"></span>
-                  <button id="comparadorSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
-                    <i class="bi bi-calculator me-1"></i>Comparar Cenários Lado a Lado
-                  </button>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button id="comparadorPrintBtn" type="button" class="btn btn-outline-dark btn-sm px-3" disabled>
+                      <i class="bi bi-printer me-1"></i>Imprimir / Salvar Relatório PDF
+                    </button>
+                    <button id="comparadorSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
+                      <i class="bi bi-calculator me-1"></i>Comparar Cenários Lado a Lado
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -233,9 +254,14 @@
 
                 <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
                   <span id="presumidoRealStatusText" class="small text-muted"></span>
-                  <button id="presumidoRealSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
-                    <i class="bi bi-calculator me-1"></i>Comparar Presumido vs. Real
-                  </button>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button id="presumidoRealPrintBtn" type="button" class="btn btn-outline-dark btn-sm px-3" disabled>
+                      <i class="bi bi-printer me-1"></i>Imprimir / Salvar Relatório PDF
+                    </button>
+                    <button id="presumidoRealSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
+                      <i class="bi bi-calculator me-1"></i>Comparar Presumido vs. Real
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

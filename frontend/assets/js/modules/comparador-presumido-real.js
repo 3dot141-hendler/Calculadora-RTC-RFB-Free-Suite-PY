@@ -78,6 +78,11 @@
     });
   }
 
+  function setPrintButtonState(enabled) {
+    const printBtn = document.getElementById("presumidoRealPrintBtn");
+    if (printBtn) printBtn.disabled = !enabled;
+  }
+
   function renderResultado(container, data) {
     const nowLabel = new Date().toLocaleTimeString("pt-BR");
     const maxAliq = Math.max(
@@ -162,6 +167,26 @@
       })
       .join("");
 
+    const tableRowsHtml = data.cenarios
+      .map((c) => {
+        const irpjTotal = Number(c.irpj_basico) + Number(c.adicional_irpj);
+        const statusTag = c.elegivel
+          ? ""
+          : ' <span class="badge text-bg-danger ms-1">Inelegível</span>';
+        return `
+          <tr>
+            <td class="fw-semibold">${c.nome}${statusTag}</td>
+            <td class="text-end">${formatBRL(c.base_calculo_irpj)} / ${formatBRL(c.base_calculo_csll)}</td>
+            <td class="text-end">${formatBRL(irpjTotal)}</td>
+            <td class="text-end">${formatBRL(c.csll)}</td>
+            <td class="text-end text-primary fw-semibold">${formatBRL(c.total_irpj_csll)}</td>
+            <td class="text-end">${formatBRL(c.ibs_cbs_is_liquido)}</td>
+            <td class="text-end fw-bold">${formatBRL(c.carga_tributaria_total)} (${formatPct(c.aliquota_efetiva_percentual)})</td>
+          </tr>
+        `;
+      })
+      .join("");
+
     const alertClass = data.excede_limite_presumido ? "alert-warning" : "alert-primary";
 
     container.innerHTML = `
@@ -186,8 +211,40 @@
         <p class="mb-0 small">${data.resumo_executivo}</p>
       </div>
 
-      <div class="row g-3">${cardsHtml}</div>
+      <div class="row g-3 mb-4">${cardsHtml}</div>
+
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <h3 class="h6 mb-0 fw-bold"><i class="bi bi-table me-2 text-primary"></i>Quadro Comparativo Sintético Mensal</h3>
+          <button type="button" class="btn btn-outline-dark btn-sm" data-comparador-print="presumido_real">
+            <i class="bi bi-printer me-1"></i>Imprimir / Salvar Relatório PDF
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>Regime</th>
+                <th class="text-end">Base IRPJ / CSLL</th>
+                <th class="text-end">IRPJ + Adic.</th>
+                <th class="text-end">CSLL (9%)</th>
+                <th class="text-end">Subtotal Lucro</th>
+                <th class="text-end">IBS/CBS/IS Líq.</th>
+                <th class="text-end">Carga Total</th>
+              </tr>
+            </thead>
+            <tbody>${tableRowsHtml}</tbody>
+          </table>
+        </div>
+      </div>
     `;
+
+    const inlinePrintBtn = container.querySelector('[data-comparador-print="presumido_real"]');
+    if (inlinePrintBtn) {
+      inlinePrintBtn.addEventListener("click", () => {
+        window.ComparadorReport?.printReport("presumido_real");
+      });
+    }
   }
 
   async function runComparison(form, container, scrollToResult = false) {
@@ -198,11 +255,15 @@
     const despesas = Number(readNum(form, "despesas_dedutiveis_mensais", "-1"));
 
     if (Number.isNaN(receita) || receita <= 0) {
+      window.ComparadorReport?.setLastResult("presumido_real", null, null);
+      setPrintButtonState(false);
       container.innerHTML =
         '<div class="alert alert-warning mb-0">Informe uma <strong>Receita Bruta Mensal</strong> maior que zero.</div>';
       return;
     }
     if (Number.isNaN(despesas) || despesas < 0) {
+      window.ComparadorReport?.setLastResult("presumido_real", null, null);
+      setPrintButtonState(false);
       container.innerHTML =
         '<div class="alert alert-warning mb-0">As <strong>Despesas Dedutíveis</strong> não podem ser negativas.</div>';
       return;
@@ -235,16 +296,22 @@
       });
       const data = await res.json();
       if (!res.ok) {
+        window.ComparadorReport?.setLastResult("presumido_real", null, null);
+        setPrintButtonState(false);
         container.innerHTML = `<div class="alert alert-danger mb-0">${JSON.stringify(data.detail)}</div>`;
         if (statusText) statusText.textContent = "Erro de validação.";
         return;
       }
+      window.ComparadorReport?.setLastResult("presumido_real", payload, data);
+      setPrintButtonState(true);
       renderResultado(container, data);
       if (statusText) {
         statusText.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Simulação atualizada às ${new Date().toLocaleTimeString("pt-BR")}`;
       }
       if (scrollToResult) container.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } catch (err) {
+      window.ComparadorReport?.setLastResult("presumido_real", null, null);
+      setPrintButtonState(false);
       container.innerHTML = `<div class="alert alert-danger mb-0">Erro ao consultar API: ${err.message}</div>`;
     } finally {
       if (submitBtn) {
@@ -259,9 +326,16 @@
 
     const form = document.getElementById("presumidoRealForm");
     const container = document.getElementById("presumidoRealResultadoArea");
+    const printBtn = document.getElementById("presumidoRealPrintBtn");
     if (!form || !container) return;
 
     window.BrNumber?.attachMoneyInputs(form);
+
+    if (printBtn) {
+      printBtn.addEventListener("click", () => {
+        window.ComparadorReport?.printReport("presumido_real");
+      });
+    }
 
     document.querySelectorAll("[data-pr-preset]").forEach((btn) => {
       btn.addEventListener("click", () => {

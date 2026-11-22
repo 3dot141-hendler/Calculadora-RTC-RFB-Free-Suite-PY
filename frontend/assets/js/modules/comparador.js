@@ -94,6 +94,11 @@
     return JSON.stringify(detail);
   }
 
+  function setPrintButtonState(enabled) {
+    const printBtn = document.getElementById("comparadorPrintBtn");
+    if (printBtn) printBtn.disabled = !enabled;
+  }
+
   function renderResultado(container, data) {
     const nowLabel = new Date().toLocaleTimeString("pt-BR");
     const maxAliq = Math.max(
@@ -222,8 +227,11 @@
       <div class="row g-3 mb-4">${cardsHtml}</div>
 
       <div class="card shadow-sm border-0">
-        <div class="card-header bg-white py-2">
+        <div class="card-header bg-white py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <h3 class="h6 mb-0 fw-bold"><i class="bi bi-table me-2 text-primary"></i>Quadro Comparativo Sintético</h3>
+          <button type="button" class="btn btn-outline-dark btn-sm" data-comparador-print="simples_regular">
+            <i class="bi bi-printer me-1"></i>Imprimir / Salvar Relatório PDF
+          </button>
         </div>
         <div class="table-responsive">
           <table class="table table-sm table-hover align-middle mb-0 small">
@@ -243,6 +251,13 @@
         </div>
       </div>
     `;
+
+    const inlinePrintBtn = container.querySelector('[data-comparador-print="simples_regular"]');
+    if (inlinePrintBtn) {
+      inlinePrintBtn.addEventListener("click", () => {
+        window.ComparadorReport?.printReport("simples_regular");
+      });
+    }
   }
 
   async function runComparison(form, container, scrollToResult = false) {
@@ -253,12 +268,16 @@
     const valorOp = Number(readNumberField(form, "valor_operacao", "0"));
 
     if (Number.isNaN(rbt12) || rbt12 < 0 || rbt12 > 4800000) {
+      window.ComparadorReport?.setLastResult("simples_regular", null, null);
+      setPrintButtonState(false);
       container.innerHTML =
         '<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-2"></i>O campo <strong>RBT12</strong> deve estar entre <strong>R$ 0,00</strong> e <strong>R$ 4.800.000,00</strong> (limite legal do Simples Nacional).</div>';
       return;
     }
 
     if (Number.isNaN(valorOp) || valorOp <= 0) {
+      window.ComparadorReport?.setLastResult("simples_regular", null, null);
+      setPrintButtonState(false);
       container.innerHTML =
         '<div class="alert alert-warning mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Informe um <strong>Valor da Operação</strong> maior que zero.</div>';
       return;
@@ -294,10 +313,14 @@
       });
       const data = await res.json();
       if (!res.ok) {
+        window.ComparadorReport?.setLastResult("simples_regular", null, null);
+        setPrintButtonState(false);
         container.innerHTML = `<div class="alert alert-danger mb-0">${formatValidationError(data.detail)}</div>`;
         if (statusText) statusText.textContent = "Erro de validação nos parâmetros.";
         return;
       }
+      window.ComparadorReport?.setLastResult("simples_regular", payload, data);
+      setPrintButtonState(true);
       renderResultado(container, data);
       if (statusText) {
         statusText.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Simulação atualizada às ${new Date().toLocaleTimeString("pt-BR")}`;
@@ -306,6 +329,8 @@
         container.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     } catch (err) {
+      window.ComparadorReport?.setLastResult("simples_regular", null, null);
+      setPrintButtonState(false);
       container.innerHTML = `<div class="alert alert-danger mb-0">Erro ao consultar API: ${err.message}</div>`;
       if (statusText) statusText.textContent = "Falha de comunicação com a API.";
     } finally {
@@ -321,9 +346,16 @@
 
     const form = document.getElementById("comparadorForm");
     const container = document.getElementById("comparadorResultadoArea");
+    const printBtn = document.getElementById("comparadorPrintBtn");
     if (!form || !container) return;
 
     window.BrNumber?.attachMoneyInputs(form);
+
+    if (printBtn) {
+      printBtn.addEventListener("click", () => {
+        window.ComparadorReport?.printReport("simples_regular");
+      });
+    }
 
     document.querySelectorAll("[data-preset]").forEach((btn) => {
       btn.addEventListener("click", () => {
