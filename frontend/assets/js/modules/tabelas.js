@@ -13,43 +13,97 @@
     return td;
   }
 
+  function setBadgeCount(id, count) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(count);
+  }
+
+  function formatPctLabel(value) {
+    const num = Number(value);
+    if (Number.isNaN(num)) return `${value ?? "0,00"}%`;
+    return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  }
+
+  async function carregarCsts(dataIso, cstCode = "", queryText = "") {
+    const params = new URLSearchParams({ data_fato_gerador: dataIso });
+    if (cstCode && cstCode.trim().length === 3) params.set("cst", cstCode.trim());
+    if (queryText && queryText.trim().length >= 1) params.set("q", queryText.trim());
+
+    const res = await fetch(`${API_BASE}/cst?${params.toString()}`);
+    const cstBody = document.getElementById("tabelasCstBody");
+    if (!cstBody || !res.ok) return;
+
+    const csts = await res.json();
+    setBadgeCount("tabelasCstCount", csts.length);
+    cstBody.replaceChildren();
+
+    if (!csts.length) {
+      const tr = document.createElement("tr");
+      const td = createCell("Nenhuma classificação encontrada para o filtro informado.", "text-muted small text-center py-3");
+      td.colSpan = 4;
+      tr.appendChild(td);
+      cstBody.appendChild(tr);
+      return;
+    }
+
+    csts.forEach((item) => {
+      const tr = document.createElement("tr");
+      tr.append(
+        createCell(item.cst, "fw-semibold"),
+        createCell(item.c_class_trib, "text-nowrap"),
+        createCell(item.descricao, "small"),
+        createCell(
+          `${formatPctLabel(item.aliquota_reducao_ibs)} / ${formatPctLabel(item.aliquota_reducao_cbs)}`,
+          "text-end small text-nowrap"
+        )
+      );
+      cstBody.appendChild(tr);
+    });
+  }
+
   async function carregarTabelas(dataIso) {
     const query = `?data_fato_gerador=${encodeURIComponent(dataIso)}`;
-    const [cstRes, ativRes, govRes] = await Promise.all([
-      fetch(`${API_BASE}/cst${query}`),
+    const cstCode = document.getElementById("cstCodeFilter")?.value || "";
+    const cstQuery = document.getElementById("cstQueryFilter")?.value || "";
+
+    const [, ativRes, ufsRes, govRes] = await Promise.all([
+      carregarCsts(dataIso, cstCode, cstQuery),
       fetch(`${API_BASE}/atividades-simples${query}`),
+      fetch(`${API_BASE}/ufs${query}`),
       fetch(`${API_BASE}/compra-gov-simples${query}`),
     ]);
-
-    const cstBody = document.getElementById("tabelasCstBody");
-    if (cstBody && cstRes.ok) {
-      const csts = await cstRes.json();
-      cstBody.replaceChildren();
-      csts.forEach((item) => {
-        const tr = document.createElement("tr");
-        tr.append(
-          createCell(item.cst, "fw-semibold"),
-          createCell(item.c_class_trib),
-          createCell(item.descricao, "small"),
-          createCell(`${item.aliquota_reducao_ibs}% / ${item.aliquota_reducao_cbs}%`, "text-end small")
-        );
-        cstBody.appendChild(tr);
-      });
-    }
 
     const ativBody = document.getElementById("tabelasAtivBody");
     if (ativBody && ativRes.ok) {
       const atividades = await ativRes.json();
+      setBadgeCount("tabelasAtivCount", atividades.length);
       ativBody.replaceChildren();
       atividades.forEach((item) => {
         const tr = document.createElement("tr");
         tr.append(
           createCell(item.codigo, "fw-semibold"),
           createCell(item.descricao, "small"),
-          createCell(item.anexo_sem_fator_r || "Sem anexo"),
-          createCell(item.anexo_com_fator_r || "-")
+          createCell(item.anexo_sem_fator_r || "Sem anexo", "text-nowrap"),
+          createCell(item.anexo_com_fator_r || "-", "text-nowrap")
         );
         ativBody.appendChild(tr);
+      });
+    }
+
+    const ufsBody = document.getElementById("tabelasUfsBody");
+    if (ufsBody && ufsRes.ok) {
+      const ufs = await ufsRes.json();
+      setBadgeCount("tabelasUfsCount", ufs.length);
+      ufsBody.replaceChildren();
+      ufs.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          createCell(item.uf, "fw-semibold"),
+          createCell(item.nome, "small"),
+          createCell(formatPctLabel(item.aliquota_ibs_uf), "text-end small text-nowrap"),
+          createCell(formatPctLabel(item.aliquota_cbs), "text-end small text-nowrap")
+        );
+        ufsBody.appendChild(tr);
       });
     }
 
@@ -102,6 +156,16 @@
       carregarTabelas(dateInput.value);
     }
 
+    const cstForm = document.getElementById("cstSearchForm");
+    const cstCode = document.getElementById("cstCodeFilter");
+    const cstQuery = document.getElementById("cstQueryFilter");
+    if (cstForm && cstCode && cstQuery && dateInput) {
+      cstForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        carregarCsts(dateInput.value, cstCode.value, cstQuery.value);
+      });
+    }
+
     const locForm = document.getElementById("localidadesSearchForm");
     const locUf = document.getElementById("locUfInput");
     const locNome = document.getElementById("locNomeInput");
@@ -114,4 +178,3 @@
     }
   });
 })(window, document);
-

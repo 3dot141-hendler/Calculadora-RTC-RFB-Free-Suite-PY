@@ -15,6 +15,7 @@ def _vigencia_clause() -> str:
 def listar_cst_classificacao(
     data_fato_gerador: date,
     cst: str | None = None,
+    q: str | None = None,
     db_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Lista classificações CST/cClassTrib vigentes na data do fato gerador."""
@@ -30,6 +31,10 @@ def listar_cst_classificacao(
     if cst:
         query += " AND cst = ?"
         params.append(cst)
+    if q and q.strip():
+        termo = f"%{q.strip()}%"
+        query += " AND (c_class_trib LIKE ? OR descricao LIKE ?)"
+        params.extend([termo, termo])
     query += " ORDER BY cst, c_class_trib"
 
     with readonly_session(target) as conn:
@@ -53,34 +58,6 @@ def listar_atividades_simples(
     """
     with readonly_session(target) as conn:
         rows = conn.execute(query, [data_iso, data_iso]).fetchall()
-    return [dict(row) for row in rows]
-
-
-def buscar_localidades_ibge(
-    uf: str | None = None,
-    nome: str | None = None,
-    codigo: int | None = None,
-    limit: int = 50,
-    db_path: Path | None = None,
-) -> list[dict[str, Any]]:
-    """Consulta municípios IBGE no catálogo oficial somente-leitura."""
-    target = ensure_reference_db(db_path)
-    query = "SELECT codigo_ibge, nome, uf_codigo, uf_sigla FROM localidades_ibge WHERE 1=1"
-    params: list[Any] = []
-    if codigo is not None:
-        query += " AND codigo_ibge = ?"
-        params.append(codigo)
-    if uf:
-        query += " AND uf_sigla = ?"
-        params.append(uf.upper())
-    if nome:
-        query += " AND nome LIKE ?"
-        params.append(f"%{nome}%")
-    query += " ORDER BY uf_sigla, nome LIMIT ?"
-    params.append(limit)
-
-    with readonly_session(target) as conn:
-        rows = conn.execute(query, params).fetchall()
     return [dict(row) for row in rows]
 
 
@@ -146,4 +123,3 @@ def buscar_localidades_ibge(
     with readonly_session(target) as conn:
         rows = conn.execute(query, params).fetchall()
     return [dict(row) for row in rows]
-

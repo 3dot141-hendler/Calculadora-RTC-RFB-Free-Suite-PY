@@ -20,9 +20,10 @@ router = APIRouter(prefix="/tabelas", tags=["Tabelas Oficiais (RFB)"])
 def endpoint_listar_cst(
     data_fato_gerador: date = Query(default=date(2026, 1, 1)),
     cst: str | None = Query(default=None, min_length=3, max_length=3),
+    q: str | None = Query(default=None, min_length=1, max_length=80),
 ) -> list[dict[str, Any]]:
     """Lista classificações tributárias CST/cClassTrib vigentes na data informada."""
-    return listar_cst_classificacao(data_fato_gerador=data_fato_gerador, cst=cst)
+    return listar_cst_classificacao(data_fato_gerador=data_fato_gerador, cst=cst, q=q)
 
 
 @router.get("/atividades-simples", summary="Consultar atividades cAtivSN vigentes")
@@ -64,4 +65,3 @@ def endpoint_buscar_localidades(
 ) -> list[dict[str, Any]]:
     """Consulta municípios IBGE por UF, nome ou código de 7 dígitos."""
     return buscar_localidades_ibge(uf=uf, nome=nome, codigo=codigo, limit=limit)
-
