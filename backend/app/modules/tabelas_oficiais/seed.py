@@ -4,6 +4,7 @@ from pathlib import Path
 import sqlite3
 
 from app.core.config import get_settings
+from .icms_ufs_data import ICMS_MODAL_UFS_2026
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
 
@@ -118,9 +119,7 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
         INSERT INTO redutor_compra_governamental (id, percentual_redutor, inicio_vigencia, fim_vigencia)
         VALUES (?, ?, ?, ?)
         """,
-        [
-            (2, "0.00", "2026-01-01", None),
-        ],
+        [(2, "0.00", "2026-01-01", None)],
     )
 
     conn.executemany(
@@ -156,9 +155,7 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
             (nbs, descricao, item_lc116, c_class_trib, inicio_vigencia, fim_vigencia)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        [
-            ("122011", "Serviços de ensino pré-escolar", "08.01", "200028", "2026-01-01", None),
-        ],
+        [("122011", "Serviços de ensino pré-escolar", "08.01", "200028", "2026-01-01", None)],
     )
 
     conn.executemany(
@@ -171,17 +168,9 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
         """,
         [
             (
-                1,
-                "Tributação pelo Imposto Seletivo - Com Cálculo",
-                None,
-                None,
-                "baseCalculoInformada",
-                "baseCalculo*aliquotaAdValorem+quantidade*aliquotaAdRem",
-                "tributoCalculado",
-                1,
-                0,
-                "2026-01-01",
-                None,
+                1, "Tributação pelo Imposto Seletivo - Com Cálculo", None, None,
+                "baseCalculoInformada", "baseCalculo*aliquotaAdValorem+quantidade*aliquotaAdRem",
+                "tributoCalculado", 1, 0, "2026-01-01", None,
             ),
         ],
     )
@@ -193,6 +182,27 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
         VALUES (?, ?, ?, ?, ?, ?)
         """,
         [(sigla, nome, "10.00", "8.80", "2026-01-01", None) for sigla, nome in _UFS_BRASIL],
+    )
+
+    conn.executemany(
+        """
+        INSERT INTO icms_aliquota_uf
+            (uf, aliquota_interna, aliquota_fcp, inicio_vigencia, fim_vigencia, fundamentacao)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ICMS_MODAL_UFS_2026,
+    )
+
+    conn.executemany(
+        """
+        INSERT INTO iss_servicos_catalogo (id, codigo_ctribnac, subitem_lc116, descricao)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (1, "01.01.01.000", "01.01", "Análise e desenvolvimento de sistemas."),
+            (2, "01.07.01.000", "01.07", "Suporte técnico em informática."),
+            (3, "17.19.01.000", "17.19", "Contabilidade, inclusive serviços técnicos e auxiliares."),
+        ],
     )
 
     conn.executemany(

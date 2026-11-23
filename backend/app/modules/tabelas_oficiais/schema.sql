@@ -97,6 +97,26 @@ CREATE TABLE IF NOT EXISTS uf_aliquota_referencia (
     PRIMARY KEY (uf, inicio_vigencia)
 );
 
+CREATE TABLE IF NOT EXISTS icms_aliquota_uf (
+    uf TEXT NOT NULL,
+    aliquota_interna TEXT NOT NULL,
+    aliquota_fcp TEXT NOT NULL DEFAULT '0.00',
+    inicio_vigencia TEXT NOT NULL,
+    fim_vigencia TEXT,
+    fundamentacao TEXT,
+    PRIMARY KEY (uf, inicio_vigencia)
+);
+
+CREATE TABLE IF NOT EXISTS iss_servicos_catalogo (
+    id INTEGER PRIMARY KEY,
+    codigo_ctribnac TEXT NOT NULL UNIQUE,
+    subitem_lc116 TEXT NOT NULL,
+    descricao TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_iss_servicos_subitem
+    ON iss_servicos_catalogo (subitem_lc116);
+
 CREATE TABLE IF NOT EXISTS localidades_ibge (
     codigo_ibge INTEGER PRIMARY KEY,
     nome TEXT NOT NULL,

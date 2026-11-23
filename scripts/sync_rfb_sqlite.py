@@ -11,8 +11,12 @@ from pathlib import Path
 import re
 import sqlite3
 import subprocess
+import sys
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT_DIR / "backend"))
+from app.modules.tabelas_oficiais.icms_ufs_data import ICMS_MODAL_UFS_2026  # noqa: E402
+
 SCHEMA_PATH = ROOT_DIR / "backend" / "app" / "modules" / "tabelas_oficiais" / "schema.sql"
 DB_PATH = ROOT_DIR / "database" / "rtc_referencias.db"
 
@@ -146,7 +150,7 @@ def _load_rfb_memory_db(branch: str = "originals") -> sqlite3.Connection:
     return mem
 
 
-def _replace_table(conn: sqlite3.Connection, table: str, insert_sql: str, rows: list[tuple]) -> int:
+def _replace_table(conn: sqlite3.Connection, table: str, insert_sql: str, rows: list[tuple] | tuple[tuple, ...]) -> int:
     conn.execute(f"DELETE FROM {table}")
     conn.executemany(insert_sql, rows)
     return len(rows)
@@ -209,6 +213,11 @@ def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[
                 "INSERT INTO uf_aliquota_referencia (uf, nome, aliquota_ibs_uf, aliquota_cbs, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?)",
                 ufs_records,
             ),
+            "icms_ufs": _replace_table(
+                conn, "icms_aliquota_uf",
+                "INSERT INTO icms_aliquota_uf (uf, aliquota_interna, aliquota_fcp, inicio_vigencia, fim_vigencia, fundamentacao) VALUES (?, ?, ?, ?, ?, ?)",
+                ICMS_MODAL_UFS_2026,
+            ),
             "cst_classificacao": _replace_table(
                 conn, "cst_classificacao",
                 "INSERT INTO cst_classificacao (cst, c_class_trib, descricao, aliquota_reducao_ibs, aliquota_reducao_cbs, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -259,10 +268,10 @@ def main() -> None:
     c = sync_rfb_tables(branch=args.branch)
     print(
         f"Sincronizado em {DB_PATH}: "
-        f"{c['ufs']} UFs | {c['cst_classificacao']} CST | {c['atividade_simples']} cAtivSN | "
-        f"{c['ncm_imposto_seletivo']} NCM IS | {c['nbs_aplicavel']} NBS | "
-        f"{c['tratamento_tributario']} Tratamentos | {c['redutor_compra_governamental']} Redutor | "
-        f"{c['transferencia_cbs_ente_gov']} Transf. CBS"
+        f"{c['ufs']} UFs | {c['icms_ufs']} ICMS UF | {c['cst_classificacao']} CST | "
+        f"{c['atividade_simples']} cAtivSN | {c['ncm_imposto_seletivo']} NCM IS | "
+        f"{c['nbs_aplicavel']} NBS | {c['tratamento_tributario']} Tratamentos | "
+        f"{c['redutor_compra_governamental']} Redutor | {c['transferencia_cbs_ente_gov']} Transf. CBS"
     )
 
 
