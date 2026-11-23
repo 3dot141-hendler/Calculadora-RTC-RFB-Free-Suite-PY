@@ -115,6 +115,31 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
 
     conn.executemany(
         """
+        INSERT INTO redutor_compra_governamental (id, percentual_redutor, inicio_vigencia, fim_vigencia)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (2, "0.00", "2026-01-01", None),
+        ],
+    )
+
+    conn.executemany(
+        """
+        INSERT INTO transferencia_cbs_ente_gov (id, percentual_transferencia, inicio_vigencia, fim_vigencia)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (1, "10.00", "2029-01-01", "2029-12-31"),
+            (2, "20.00", "2030-01-01", "2030-12-31"),
+            (3, "30.00", "2031-01-01", "2031-12-31"),
+            (4, "40.00", "2032-01-01", "2032-12-31"),
+            (5, "100.00", "2033-01-01", None),
+            (6, "0.00", "2026-01-01", "2028-12-31"),
+        ],
+    )
+
+    conn.executemany(
+        """
         INSERT INTO uf_aliquota_referencia
             (uf, nome, aliquota_ibs_uf, aliquota_cbs, inicio_vigencia, fim_vigencia)
         VALUES (?, ?, ?, ?, ?, ?)

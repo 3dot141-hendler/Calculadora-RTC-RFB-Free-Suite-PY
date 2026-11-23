@@ -1,4 +1,4 @@
-"""Sincroniza 27 UFs, CST/cClassTrib (LC 214/2025) e cAtivSN (NT 2026.005) de `originals` para SQLite.
+"""Sincroniza tabelas oficiais da RFB de `originals` para SQLite.
 
 Lê diretamente as migrações oficiais Flyway da RFB na branch `originals` via `git show`,
 sem copiar a pasta `references/` para a branch de trabalho.
@@ -49,6 +49,18 @@ SELECT
 FROM ATIVIDADE_SIMPLES_NACIONAL
 WHERE ATSN_CATIVSN IS NOT NULL
 ORDER BY ATSN_ORDEM
+"""
+
+_SQL_REDUTOR_COMPRA_GOV = """
+SELECT RCGO_ID, RCGO_VALOR, RCGO_INICIO_VIGENCIA, RCGO_FIM_VIGENCIA
+FROM REDUTOR_COMPRA_GOVERNAMENTAL
+ORDER BY RCGO_ID
+"""
+
+_SQL_TRANSFERENCIA_CBS = """
+SELECT TCEG_ID, TCEG_VALOR, TCEG_INICIO_VIGENCIA, TCEG_FIM_VIGENCIA
+FROM TRANSFERENCIA_CBS_ENTE_GOV
+ORDER BY TCEG_ID
 """
 
 
@@ -108,7 +120,7 @@ def _load_rfb_memory_db(branch: str = "originals") -> sqlite3.Connection:
 
 
 def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[str, int]:
-    """Sincroniza 27 UFs, CST/cClassTrib e cAtivSN no banco SQLite de referência."""
+    """Sincroniza UFs, CST/cClassTrib, cAtivSN e compra governamental no SQLite de referência."""
     mem = _load_rfb_memory_db(branch=branch)
     try:
         uf_rows = mem.execute(
@@ -144,6 +156,18 @@ def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[
                 fim_vigencia,
             )
             for codigo, descricao, anexo_sem_fator_r, anexo_com_fator_r, fim_vigencia in ativ_rows
+        ]
+
+        redutor_rows = mem.execute(_SQL_REDUTOR_COMPRA_GOV).fetchall()
+        redutor_records = [
+            (int(rid), f"{float(valor):.2f}", ini, fim)
+            for rid, valor, ini, fim in redutor_rows
+        ]
+
+        transf_rows = mem.execute(_SQL_TRANSFERENCIA_CBS).fetchall()
+        transf_records = [
+            (int(tid), f"{float(valor):.2f}", ini, fim)
+            for tid, valor, ini, fim in transf_rows
         ]
     finally:
         mem.close()
@@ -182,6 +206,26 @@ def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[
             ativ_records,
         )
 
+        conn.execute("DELETE FROM redutor_compra_governamental")
+        conn.executemany(
+            """
+            INSERT INTO redutor_compra_governamental
+                (id, percentual_redutor, inicio_vigencia, fim_vigencia)
+            VALUES (?, ?, ?, ?)
+            """,
+            redutor_records,
+        )
+
+        conn.execute("DELETE FROM transferencia_cbs_ente_gov")
+        conn.executemany(
+            """
+            INSERT INTO transferencia_cbs_ente_gov
+                (id, percentual_transferencia, inicio_vigencia, fim_vigencia)
+            VALUES (?, ?, ?, ?)
+            """,
+            transf_records,
+        )
+
         conn.commit()
     finally:
         conn.close()
@@ -190,6 +234,8 @@ def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[
         "ufs": len(ufs_records),
         "cst_classificacao": len(cst_records),
         "atividade_simples": len(ativ_records),
+        "redutor_compra_governamental": len(redutor_records),
+        "transferencia_cbs_ente_gov": len(transf_records),
     }
 
 
@@ -203,7 +249,9 @@ def main() -> None:
         f"Sincronizado em {DB_PATH}: "
         f"{counts['ufs']} UFs | "
         f"{counts['cst_classificacao']} CST/cClassTrib | "
-        f"{counts['atividade_simples']} atividades cAtivSN"
+        f"{counts['atividade_simples']} cAtivSN | "
+        f"{counts['redutor_compra_governamental']} redutor compra gov | "
+        f"{counts['transferencia_cbs_ente_gov']} transf. CBS"
     )
 
 

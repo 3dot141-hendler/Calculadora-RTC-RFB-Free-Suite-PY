@@ -79,6 +79,42 @@ def obter_fator_compra_gov_simples(
     return dict(row) if row else None
 
 
+def obter_redutor_compra_gov_regime_geral(
+    data_fato_gerador: date,
+    db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Obtém o percentual de redutor de compra governamental vigente no Regime Geral (V0019)."""
+    target = ensure_reference_db(db_path)
+    data_iso = data_fato_gerador.isoformat()
+    query = f"""
+        SELECT id, percentual_redutor, inicio_vigencia, fim_vigencia
+        FROM redutor_compra_governamental
+        WHERE {_vigencia_clause()}
+        LIMIT 1
+    """
+    with readonly_session(target) as conn:
+        row = conn.execute(query, [data_iso, data_iso]).fetchone()
+    return dict(row) if row else None
+
+
+def obter_transferencia_cbs_ente_gov(
+    data_fato_gerador: date,
+    db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Obtém o percentual de transferência da CBS para entes governamentais (V0019)."""
+    target = ensure_reference_db(db_path)
+    data_iso = data_fato_gerador.isoformat()
+    query = f"""
+        SELECT id, percentual_transferencia, inicio_vigencia, fim_vigencia
+        FROM transferencia_cbs_ente_gov
+        WHERE {_vigencia_clause()}
+        LIMIT 1
+    """
+    with readonly_session(target) as conn:
+        row = conn.execute(query, [data_iso, data_iso]).fetchone()
+    return dict(row) if row else None
+
+
 def listar_ufs_referencia(
     data_fato_gerador: date,
     db_path: Path | None = None,

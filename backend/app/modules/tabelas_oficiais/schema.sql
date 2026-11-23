@@ -33,6 +33,20 @@ CREATE TABLE IF NOT EXISTS transicao_compra_gov_simples (
     fim_vigencia TEXT
 );
 
+CREATE TABLE IF NOT EXISTS redutor_compra_governamental (
+    id INTEGER PRIMARY KEY,
+    percentual_redutor TEXT NOT NULL,
+    inicio_vigencia TEXT NOT NULL,
+    fim_vigencia TEXT
+);
+
+CREATE TABLE IF NOT EXISTS transferencia_cbs_ente_gov (
+    id INTEGER PRIMARY KEY,
+    percentual_transferencia TEXT NOT NULL,
+    inicio_vigencia TEXT NOT NULL,
+    fim_vigencia TEXT
+);
+
 CREATE TABLE IF NOT EXISTS uf_aliquota_referencia (
     uf TEXT NOT NULL,
     nome TEXT NOT NULL,
@@ -52,4 +66,3 @@ CREATE TABLE IF NOT EXISTS localidades_ibge (
 
 CREATE INDEX IF NOT EXISTS idx_localidades_uf_nome
     ON localidades_ibge (uf_sigla, nome);
-
