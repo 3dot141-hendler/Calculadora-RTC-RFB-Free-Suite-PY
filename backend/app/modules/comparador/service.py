@@ -13,7 +13,8 @@ from .engine_presumido_real import (
     InsumoPresumidoReal,
     executar_comparacao_presumido_real,
 )
-from .schemas import ComparadorRequest, ComparadorResponse
+from .fator_r import simular_analise_fator_r
+from .schemas import AnaliseFatorR, ComparadorRequest, ComparadorResponse
 from .schemas_presumido_real import (
     ComparadorPresumidoRealRequest,
     ComparadorPresumidoRealResponse,
@@ -66,11 +67,22 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
         override_cbs=payload.aliquota_cbs,
     )
 
+    analise_fator_r: Optional[AnaliseFatorR] = None
+    anexo_efetivo = payload.anexo
+    if payload.aplicar_fator_r:
+        folha = payload.folha_salarios_12m if payload.folha_salarios_12m is not None else Decimal("0.00")
+        analise_fator_r = simular_analise_fator_r(
+            receita_bruta_12m=payload.receita_bruta_12m,
+            valor_operacao=payload.valor_operacao,
+            folha_salarios_12m=folha,
+        )
+        anexo_efetivo = analise_fator_r.anexo_definido
+
     resultado = executar_comparacao_regimes(
         InsumoComparador(
             receita_bruta_12m=payload.receita_bruta_12m,
             valor_operacao=payload.valor_operacao,
-            anexo=payload.anexo,
+            anexo=anexo_efetivo,
             aliquota_ibs_uf=aliq_ibs_uf,
             aliquota_ibs_mun=payload.aliquota_ibs_mun,
             aliquota_cbs=aliq_cbs,
@@ -82,10 +94,15 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
         )
     )
 
+    resumo = resultado.resumo_executivo
+    if analise_fator_r is not None:
+        resumo = f"{resumo} {analise_fator_r.recomendacao}"
+
     return ComparadorResponse(
         valor_operacao=payload.valor_operacao,
         receita_bruta_12m=payload.receita_bruta_12m,
-        anexo=payload.anexo,
+        anexo=anexo_efetivo,
+        fator_r=analise_fator_r,
         uf=uf_norm,
         c_class_trib=payload.c_class_trib,
         aliquota_ibs_uf_aplicada=aliq_ibs_uf,
@@ -98,7 +115,7 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
         melhor_cenario_carga_propria=resultado.melhor_cenario_carga_propria,
         economia_maxima_reais=resultado.economia_maxima_reais,
         melhor_cenario_competitividade_b2b=resultado.melhor_cenario_competitividade_b2b,
-        resumo_executivo=resultado.resumo_executivo,
+        resumo_executivo=resumo,
     )
 
 

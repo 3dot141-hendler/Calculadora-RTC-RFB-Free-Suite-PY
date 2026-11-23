@@ -25,7 +25,16 @@ class ComparadorRequest(BaseModel):
     )
     anexo: AnexoSimples = Field(
         default=AnexoSimples.ANEXO_I,
-        description="Anexo de enquadramento na LC 123/2006 (I a V).",
+        description="Anexo de enquadramento na LC 123/2006 (I a V). Sobrescrito por III/V quando aplicar_fator_r=True.",
+    )
+    aplicar_fator_r: bool = Field(
+        default=False,
+        description="Ativa simulação do Fator R (LC 123/2006: Folha 12m / RBT12 >= 28% → Anexo III, senão Anexo V).",
+    )
+    folha_salarios_12m: Optional[Decimal] = Field(
+        default=None,
+        ge=Decimal("0.00"),
+        description="Folha de salários, encargos e pró-labore dos últimos 12 meses (FS12) em reais.",
     )
     data_fato_gerador: date = Field(
         default=date(2026, 1, 1),
@@ -78,6 +87,23 @@ class ComparadorRequest(BaseModel):
     )
 
 
+class AnaliseFatorR(BaseModel):
+    """Diagnóstico gerencial do Fator R (Anexo III vs. Anexo V — regra dos 28%)."""
+
+    aplicado: bool
+    folha_salarios_12m: Decimal
+    percentual_fator_r: Decimal
+    atingiu_minimo_28_pct: bool
+    anexo_definido: AnexoSimples
+    folha_minima_anexo_iii: Decimal
+    folha_faltante_anexo_iii: Decimal
+    folha_faltante_mensal: Decimal
+    das_anexo_iii: Decimal
+    das_anexo_v: Decimal
+    economia_das_fator_r: Decimal
+    recomendacao: str
+
+
 class CenarioComparativo(BaseModel):
     """Detalhamento financeiro e de crédito tributário de um cenário simulado."""
 
@@ -102,6 +128,7 @@ class ComparadorResponse(BaseModel):
     valor_operacao: Decimal
     receita_bruta_12m: Decimal
     anexo: AnexoSimples
+    fator_r: Optional[AnaliseFatorR] = None
     uf: Optional[str]
     c_class_trib: Optional[str]
     aliquota_ibs_uf_aplicada: Decimal
