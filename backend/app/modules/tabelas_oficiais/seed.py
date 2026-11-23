@@ -140,6 +140,54 @@ def _seed_initial_data(conn: sqlite3.Connection) -> None:
 
     conn.executemany(
         """
+        INSERT INTO ncm_imposto_seletivo
+            (ncm, descricao, aliquota_ad_valorem, aliquota_ad_rem, inicio_vigencia, fim_vigencia)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        [
+            ("87032100", "Automóveis de cilindrada <= 1.000 cm3", "5.27", None, "2027-01-01", "2033-12-31"),
+            ("24021000", "Charutos e cigarrilhas contendo tabaco", None, "21.30", "2027-01-01", "2033-12-31"),
+        ],
+    )
+
+    conn.executemany(
+        """
+        INSERT INTO nbs_aplicavel
+            (nbs, descricao, item_lc116, c_class_trib, inicio_vigencia, fim_vigencia)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        [
+            ("122011", "Serviços de ensino pré-escolar", "08.01", "200028", "2026-01-01", None),
+        ],
+    )
+
+    conn.executemany(
+        """
+        INSERT INTO tratamento_tributario
+            (id, descricao, expressao_aliquota, expressao_aliquota_efetiva, expressao_base_calculo,
+             expressao_tributo_calculado, expressao_tributo_devido, possui_reducao, possui_monofasia,
+             inicio_vigencia, fim_vigencia)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [
+            (
+                1,
+                "Tributação pelo Imposto Seletivo - Com Cálculo",
+                None,
+                None,
+                "baseCalculoInformada",
+                "baseCalculo*aliquotaAdValorem+quantidade*aliquotaAdRem",
+                "tributoCalculado",
+                1,
+                0,
+                "2026-01-01",
+                None,
+            ),
+        ],
+    )
+
+    conn.executemany(
+        """
         INSERT INTO uf_aliquota_referencia
             (uf, nome, aliquota_ibs_uf, aliquota_cbs, inicio_vigencia, fim_vigencia)
         VALUES (?, ?, ?, ?, ?, ?)

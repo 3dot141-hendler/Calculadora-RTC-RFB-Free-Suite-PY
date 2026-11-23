@@ -41,11 +41,8 @@ ORDER BY st.SITR_CD, ct.CLTR_CD, ct.CLTR_INICIO_VIGENCIA
 
 _SQL_ATIVIDADES_SIMPLES = """
 SELECT
-    ATSN_CATIVSN AS codigo,
-    ATSN_DESCRICAO AS descricao,
-    ATSN_ANEXO_SEM_FATOR_R AS anexo_sem_fator_r,
-    ATSN_ANEXO_COM_FATOR_R AS anexo_com_fator_r,
-    ATSN_FIM_VIGENCIA AS fim_vigencia
+    ATSN_CATIVSN, ATSN_DESCRICAO, ATSN_ANEXO_SEM_FATOR_R,
+    ATSN_ANEXO_COM_FATOR_R, ATSN_FIM_VIGENCIA
 FROM ATIVIDADE_SIMPLES_NACIONAL
 WHERE ATSN_CATIVSN IS NOT NULL
 ORDER BY ATSN_ORDEM
@@ -53,45 +50,76 @@ ORDER BY ATSN_ORDEM
 
 _SQL_REDUTOR_COMPRA_GOV = """
 SELECT RCGO_ID, RCGO_VALOR, RCGO_INICIO_VIGENCIA, RCGO_FIM_VIGENCIA
-FROM REDUTOR_COMPRA_GOVERNAMENTAL
-ORDER BY RCGO_ID
+FROM REDUTOR_COMPRA_GOVERNAMENTAL ORDER BY RCGO_ID
 """
 
 _SQL_TRANSFERENCIA_CBS = """
 SELECT TCEG_ID, TCEG_VALOR, TCEG_INICIO_VIGENCIA, TCEG_FIM_VIGENCIA
-FROM TRANSFERENCIA_CBS_ENTE_GOV
-ORDER BY TCEG_ID
+FROM TRANSFERENCIA_CBS_ENTE_GOV ORDER BY TCEG_ID
+"""
+
+_SQL_NCM_IS_AD_VALOREM = """
+SELECT
+    p.AAVP_NCM_CD, COALESCE(n.NCM_DESCRICAO, 'NCM sujeito ao Imposto Seletivo'),
+    a.AADV_VALOR, NULL, p.AAVP_INICIO_VIGENCIA, p.AAVP_FIM_VIGENCIA
+FROM ALIQUOTA_AD_VALOREM_PRODUTO p
+JOIN ALIQUOTA_AD_VALOREM a ON a.AADV_ID = p.AAVP_AADV_ID
+LEFT JOIN NCM n ON n.NCM_CD = p.AAVP_NCM_CD
+WHERE a.AADV_TBTO_ID = 1
+ORDER BY p.AAVP_NCM_CD
+"""
+
+_SQL_NCM_IS_AD_REM = """
+SELECT
+    p.AARP_NCM_CD, COALESCE(n.NCM_DESCRICAO, 'NCM sujeito ao Imposto Seletivo (Ad Rem)'),
+    NULL, a.AARE_VALOR, p.AARP_INICIO_VIGENCIA, p.AARP_FIM_VIGENCIA
+FROM ALIQUOTA_AD_REM_PRODUTO p
+JOIN ALIQUOTA_AD_REM a ON a.AARE_ID = p.AARP_AARE_ID
+LEFT JOIN NCM n ON n.NCM_CD = p.AARP_NCM_CD
+WHERE a.AARE_TBTO_ID = 1
+ORDER BY p.AARP_NCM_CD
+"""
+
+_SQL_NBS_APLICAVEL = """
+SELECT
+    na.NBSA_NBS_CD, COALESCE(n.NBS_DESCRICAO, 'Serviço NBS aplicável'),
+    n.NBS_LC_116, ct.CLTR_CD, na.NBSA_INICIO_VIGENCIA, na.NBSA_FIM_VIGENCIA
+FROM NBS_APLICAVEL na
+LEFT JOIN NBS n ON n.NBS_CD = na.NBSA_NBS_CD
+LEFT JOIN CLASSIFICACAO_TRIBUTARIA ct ON ct.CLTR_ID = na.NBSA_CLTR_ID
+ORDER BY na.NBSA_NBS_CD
+"""
+
+_SQL_TRATAMENTO_TRIBUTARIO = """
+SELECT
+    TRTR_ID, TRTR_DESCRICAO, TRTR_EXPRESSAO_ALIQUOTA, TRTR_EXPRESSAO_ALIQUOTA_EFETIVA,
+    TRTR_EXPRESSAO_BASE_CALCULO, TRTR_EXPRESSAO_TRIBUTO_CALCULADO, TRTR_EXPRESSAO_TRIBUTO_DEVIDO,
+    COALESCE(TRTR_IN_POSSUI_PERCENTUAL_REDUCAO, 0), COALESCE(TRTR_IN_POSSUI_MONOFASIA, 0),
+    TRTR_INICIO_VIGENCIA, TRTR_FIM_VIGENCIA
+FROM TRATAMENTO_TRIBUTARIO
+ORDER BY TRTR_ID
 """
 
 
 def _format_uf_name(raw_name: str) -> str:
-    """Converte nome da UF em MAIÚSCULAS para Title Case PT-BR (ex.: Rio Grande do Sul)."""
     words = raw_name.strip().split()
-    formatted: list[str] = []
-    for idx, word in enumerate(words):
-        if idx > 0 and word.upper() in _LOWERCASE_PREPOSITIONS:
-            formatted.append(word.lower())
-        else:
-            formatted.append(word.capitalize())
-    return " ".join(formatted)
+    return " ".join(
+        w.lower() if idx > 0 and w.upper() in _LOWERCASE_PREPOSITIONS else w.capitalize()
+        for idx, w in enumerate(words)
+    )
 
 
 def _format_pct(value: float | None, cst: str, ind_gibscbs: int) -> str:
-    """Formata percentual de redução com 2 casas; isenção/imunidade (CST 400/410) = 100.00."""
     if cst in {"400", "410"} and ind_gibscbs == 0:
         return "100.00"
-    if value is not None:
-        return f"{float(value):.2f}"
-    return "0.00"
+    return f"{float(value):.2f}" if value is not None else "0.00"
 
 
 def _migration_sort_key(path: str) -> tuple[int, int]:
     name = path.rsplit("/", 1)[-1]
-    if name.startswith("B"):
-        match = re.search(r"B(\d+)", name)
-        return (0, int(match.group(1)) if match else 0)
-    match = re.search(r"V(\d+)", name)
-    return (1, int(match.group(1)) if match else 0)
+    prefix = 0 if name.startswith("B") else 1
+    match = re.search(r"[BV](\d+)", name)
+    return (prefix, int(match.group(1)) if match else 0)
 
 
 def _load_rfb_memory_db(branch: str = "originals") -> sqlite3.Connection:
@@ -107,7 +135,6 @@ def _load_rfb_memory_db(branch: str = "originals") -> sqlite3.Connection:
         if line.strip().endswith(".sql") and ("/criacao/B" in line or "/manutencao/V" in line)
     ]
     sql_files.sort(key=_migration_sort_key)
-
     if not sql_files:
         raise RuntimeError(f"Nenhuma migração Flyway encontrada em '{branch}:references/regime-regular/flyway/sql/'.")
 
@@ -119,55 +146,55 @@ def _load_rfb_memory_db(branch: str = "originals") -> sqlite3.Connection:
     return mem
 
 
+def _replace_table(conn: sqlite3.Connection, table: str, insert_sql: str, rows: list[tuple]) -> int:
+    conn.execute(f"DELETE FROM {table}")
+    conn.executemany(insert_sql, rows)
+    return len(rows)
+
+
 def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[str, int]:
-    """Sincroniza UFs, CST/cClassTrib, cAtivSN e compra governamental no SQLite de referência."""
+    """Sincroniza todas as tabelas oficiais da RFB no SQLite de referência."""
     mem = _load_rfb_memory_db(branch=branch)
     try:
-        uf_rows = mem.execute(
-            "SELECT UF_SIGLA, UF_NOME FROM UF WHERE UF_SIGLA != 'EX' ORDER BY UF_SIGLA"
-        ).fetchall()
         ufs_records = [
-            (sigla.upper(), _format_uf_name(nome), _DEFAULT_IBS_UF, _DEFAULT_CBS, "2026-01-01", None)
-            for sigla, nome in uf_rows
+            (s.upper(), _format_uf_name(n), _DEFAULT_IBS_UF, _DEFAULT_CBS, "2026-01-01", None)
+            for s, n in mem.execute("SELECT UF_SIGLA, UF_NOME FROM UF WHERE UF_SIGLA != 'EX' ORDER BY UF_SIGLA")
         ]
-
-        cst_rows = mem.execute(_SQL_CST_IBSCBS).fetchall()
         cst_records = [
-            (
-                cst,
-                c_class_trib,
-                descricao.strip(),
-                _format_pct(red_ibs, cst, ind_gibscbs),
-                _format_pct(red_cbs, cst, ind_gibscbs),
-                inicio_vigencia,
-                fim_vigencia,
-            )
-            for cst, c_class_trib, descricao, red_ibs, red_cbs, inicio_vigencia, fim_vigencia, ind_gibscbs in cst_rows
+            (cst, c_class, desc.strip(), _format_pct(r_ibs, cst, ind), _format_pct(r_cbs, cst, ind), ini, fim)
+            for cst, c_class, desc, r_ibs, r_cbs, ini, fim, ind in mem.execute(_SQL_CST_IBSCBS)
         ]
-
-        ativ_rows = mem.execute(_SQL_ATIVIDADES_SIMPLES).fetchall()
         ativ_records = [
-            (
-                codigo.strip(),
-                descricao.strip(),
-                anexo_sem_fator_r,
-                anexo_com_fator_r,
-                "2026-01-01",
-                fim_vigencia,
-            )
-            for codigo, descricao, anexo_sem_fator_r, anexo_com_fator_r, fim_vigencia in ativ_rows
+            (cod.strip(), desc.strip(), sem_r, com_r, "2026-01-01", fim)
+            for cod, desc, sem_r, com_r, fim in mem.execute(_SQL_ATIVIDADES_SIMPLES)
         ]
-
-        redutor_rows = mem.execute(_SQL_REDUTOR_COMPRA_GOV).fetchall()
         redutor_records = [
-            (int(rid), f"{float(valor):.2f}", ini, fim)
-            for rid, valor, ini, fim in redutor_rows
+            (int(rid), f"{float(val):.2f}", ini, fim)
+            for rid, val, ini, fim in mem.execute(_SQL_REDUTOR_COMPRA_GOV)
         ]
-
-        transf_rows = mem.execute(_SQL_TRANSFERENCIA_CBS).fetchall()
         transf_records = [
-            (int(tid), f"{float(valor):.2f}", ini, fim)
-            for tid, valor, ini, fim in transf_rows
+            (int(tid), f"{float(val):.2f}", ini, fim)
+            for tid, val, ini, fim in mem.execute(_SQL_TRANSFERENCIA_CBS)
+        ]
+        ncm_map: dict[tuple[str, str, str | None], list] = {}
+        for ncm, desc, ad_val, ad_rem, ini, fim in (
+            mem.execute(_SQL_NCM_IS_AD_VALOREM).fetchall()
+            + mem.execute(_SQL_NCM_IS_AD_REM).fetchall()
+        ):
+            key = (ncm.strip(), ini, fim)
+            entry = ncm_map.setdefault(key, [ncm.strip(), desc.strip(), None, None, ini, fim])
+            if ad_val is not None:
+                entry[2] = f"{float(ad_val):.2f}"
+            if ad_rem is not None:
+                entry[3] = f"{float(ad_rem):.2f}"
+        ncm_is_records = [tuple(v) for v in sorted(ncm_map.values(), key=lambda r: (r[0], r[4]))]
+        nbs_records = [
+            (nbs.strip(), desc.strip(), lc116, c_class, ini, fim)
+            for nbs, desc, lc116, c_class, ini, fim in mem.execute(_SQL_NBS_APLICAVEL)
+        ]
+        trat_records = [
+            (int(tid), desc.strip(), e_al, e_ef, e_bc, e_tc, e_td, int(p_red), int(p_mono), ini, fim)
+            for tid, desc, e_al, e_ef, e_bc, e_tc, e_td, p_red, p_mono, ini, fim in mem.execute(_SQL_TRATAMENTO_TRIBUTARIO)
         ]
     finally:
         mem.close()
@@ -176,67 +203,52 @@ def sync_rfb_tables(db_path: Path = DB_PATH, branch: str = "originals") -> dict[
     conn = sqlite3.connect(str(db_path))
     try:
         conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-        conn.execute("DELETE FROM uf_aliquota_referencia")
-        conn.executemany(
-            """
-            INSERT INTO uf_aliquota_referencia
-                (uf, nome, aliquota_ibs_uf, aliquota_cbs, inicio_vigencia, fim_vigencia)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            ufs_records,
-        )
-
-        conn.execute("DELETE FROM cst_classificacao")
-        conn.executemany(
-            """
-            INSERT INTO cst_classificacao
-                (cst, c_class_trib, descricao, aliquota_reducao_ibs, aliquota_reducao_cbs, inicio_vigencia, fim_vigencia)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            cst_records,
-        )
-
-        conn.execute("DELETE FROM atividade_simples")
-        conn.executemany(
-            """
-            INSERT INTO atividade_simples
-                (codigo, descricao, anexo_sem_fator_r, anexo_com_fator_r, inicio_vigencia, fim_vigencia)
-            VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            ativ_records,
-        )
-
-        conn.execute("DELETE FROM redutor_compra_governamental")
-        conn.executemany(
-            """
-            INSERT INTO redutor_compra_governamental
-                (id, percentual_redutor, inicio_vigencia, fim_vigencia)
-            VALUES (?, ?, ?, ?)
-            """,
-            redutor_records,
-        )
-
-        conn.execute("DELETE FROM transferencia_cbs_ente_gov")
-        conn.executemany(
-            """
-            INSERT INTO transferencia_cbs_ente_gov
-                (id, percentual_transferencia, inicio_vigencia, fim_vigencia)
-            VALUES (?, ?, ?, ?)
-            """,
-            transf_records,
-        )
-
+        counts = {
+            "ufs": _replace_table(
+                conn, "uf_aliquota_referencia",
+                "INSERT INTO uf_aliquota_referencia (uf, nome, aliquota_ibs_uf, aliquota_cbs, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?)",
+                ufs_records,
+            ),
+            "cst_classificacao": _replace_table(
+                conn, "cst_classificacao",
+                "INSERT INTO cst_classificacao (cst, c_class_trib, descricao, aliquota_reducao_ibs, aliquota_reducao_cbs, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                cst_records,
+            ),
+            "atividade_simples": _replace_table(
+                conn, "atividade_simples",
+                "INSERT INTO atividade_simples (codigo, descricao, anexo_sem_fator_r, anexo_com_fator_r, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?)",
+                ativ_records,
+            ),
+            "redutor_compra_governamental": _replace_table(
+                conn, "redutor_compra_governamental",
+                "INSERT INTO redutor_compra_governamental (id, percentual_redutor, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?)",
+                redutor_records,
+            ),
+            "transferencia_cbs_ente_gov": _replace_table(
+                conn, "transferencia_cbs_ente_gov",
+                "INSERT INTO transferencia_cbs_ente_gov (id, percentual_transferencia, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?)",
+                transf_records,
+            ),
+            "ncm_imposto_seletivo": _replace_table(
+                conn, "ncm_imposto_seletivo",
+                "INSERT INTO ncm_imposto_seletivo (ncm, descricao, aliquota_ad_valorem, aliquota_ad_rem, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?)",
+                ncm_is_records,
+            ),
+            "nbs_aplicavel": _replace_table(
+                conn, "nbs_aplicavel",
+                "INSERT INTO nbs_aplicavel (nbs, descricao, item_lc116, c_class_trib, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?)",
+                nbs_records,
+            ),
+            "tratamento_tributario": _replace_table(
+                conn, "tratamento_tributario",
+                "INSERT INTO tratamento_tributario (id, descricao, expressao_aliquota, expressao_aliquota_efetiva, expressao_base_calculo, expressao_tributo_calculado, expressao_tributo_devido, possui_reducao, possui_monofasia, inicio_vigencia, fim_vigencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                trat_records,
+            ),
+        }
         conn.commit()
     finally:
         conn.close()
-
-    return {
-        "ufs": len(ufs_records),
-        "cst_classificacao": len(cst_records),
-        "atividade_simples": len(ativ_records),
-        "redutor_compra_governamental": len(redutor_records),
-        "transferencia_cbs_ente_gov": len(transf_records),
-    }
+    return counts
 
 
 def main() -> None:
@@ -244,14 +256,13 @@ def main() -> None:
     parser.add_argument("--branch", default="originals", help="Branch Git de origem das migrações RFB.")
     args = parser.parse_args()
 
-    counts = sync_rfb_tables(branch=args.branch)
+    c = sync_rfb_tables(branch=args.branch)
     print(
         f"Sincronizado em {DB_PATH}: "
-        f"{counts['ufs']} UFs | "
-        f"{counts['cst_classificacao']} CST/cClassTrib | "
-        f"{counts['atividade_simples']} cAtivSN | "
-        f"{counts['redutor_compra_governamental']} redutor compra gov | "
-        f"{counts['transferencia_cbs_ente_gov']} transf. CBS"
+        f"{c['ufs']} UFs | {c['cst_classificacao']} CST | {c['atividade_simples']} cAtivSN | "
+        f"{c['ncm_imposto_seletivo']} NCM IS | {c['nbs_aplicavel']} NBS | "
+        f"{c['tratamento_tributario']} Tratamentos | {c['redutor_compra_governamental']} Redutor | "
+        f"{c['transferencia_cbs_ente_gov']} Transf. CBS"
     )
 
 
