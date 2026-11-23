@@ -1,7 +1,8 @@
 """Parser seguro de XML da NFS-e padrão nacional (DANFSE).
 
 Port baseado em `models.go` e `ADR006` (`calculadora-rtc-gerador-danfse`),
-com bloqueio explícito de DOCTYPE/entidades externas (XXE).
+com bloqueio explícito de DOCTYPE/entidades externas (XXE) e extração
+completa incluindo blocos `interm` (Intermediário) e `subst` (Substituição).
 """
 
 from datetime import datetime
@@ -48,6 +49,12 @@ class DanfseXmlSummary(BaseModel):
     prestador_endereco: str = "-"
     tomador_endereco: str = "-"
     tomador_municipio: str = "-"
+    intermediario_nome: str = ""
+    intermediario_documento: str = ""
+    intermediario_endereco: str = ""
+    intermediario_municipio: str = ""
+    chave_nfse_substituida: str = ""
+    motivo_substituicao: str = ""
     informacoes_complementares: str = ""
     ambiente_homologacao: bool = False
     qrcode_url: str = ""
@@ -56,7 +63,6 @@ class DanfseXmlSummary(BaseModel):
 def _find_text(parent: ET.Element | None, path: str, default: str = "") -> str:
     if parent is None:
         return default
-    # Ignora namespaces XML usando wildcard {*} quando necessário
     parts = [f"{{*}}{p}" for p in path.split("/")]
     node = parent.find("/".join(parts))
     if node is not None and node.text:
@@ -88,6 +94,38 @@ def _montar_endereco(parent: ET.Element | None, base_path: str) -> str:
     ]
     filtradas = [p for p in partes if p]
     return ", ".join(filtradas) if filtradas else "-"
+
+
+def _extrair_intermediario(inf: ET.Element) -> dict[str, str]:
+    """Extrai o bloco opcional `<DPS><infDPS><interm>` conforme NT 008."""
+    interm_doc = (
+        _find_text(inf, "DPS/infDPS/interm/CNPJ")
+        or _find_text(inf, "DPS/infDPS/interm/CPF")
+        or _find_text(inf, "DPS/infDPS/interm/NIF")
+    )
+    interm_nome = _find_text(inf, "DPS/infDPS/interm/xNome")
+    if not interm_nome and not interm_doc:
+        return {"nome": "", "documento": "", "endereco": "", "municipio": ""}
+
+    interm_end = _montar_endereco(inf, "DPS/infDPS/interm/end")
+    interm_mun = _resolver_municipio_ibge(
+        _find_text(inf, "DPS/infDPS/interm/end/endNac/cMun"), fallback="-"
+    )
+    return {
+        "nome": interm_nome or "Não informado",
+        "documento": formatar_cpf_cnpj(interm_doc) if interm_doc else "-",
+        "endereco": interm_end,
+        "municipio": interm_mun,
+    }
+
+
+def _extrair_substituicao(inf: ET.Element) -> tuple[str, str]:
+    """Extrai o bloco opcional `<DPS><infDPS><subst>` (chave e motivo)."""
+    ch_subst = _find_text(inf, "DPS/infDPS/subst/chSubstda")
+    c_motivo = _find_text(inf, "DPS/infDPS/subst/cMotivo")
+    x_motivo = _find_text(inf, "DPS/infDPS/subst/xMotivo")
+    motivo = " - ".join(p for p in (c_motivo, x_motivo) if p)
+    return ch_subst, motivo
 
 
 def parse_nfse_xml(xml_content: str) -> DanfseXmlSummary:
@@ -152,6 +190,9 @@ def parse_nfse_xml(xml_content: str) -> DanfseXmlSummary:
         _find_text(inf, "DPS/infDPS/toma/end/endNac/cMun"), fallback="-"
     )
 
+    interm = _extrair_intermediario(inf)
+    ch_subst, motivo_subst = _extrair_substituicao(inf)
+
     tp_amb = _find_text(inf, "DPS/infDPS/tpAmb") or _find_text(inf, "tpAmb")
     cod_trib = _find_text(inf, "DPS/infDPS/serv/cServ/cTribNac", "-")
     c_nbs = _find_text(inf, "DPS/infDPS/serv/cServ/cNBS")
@@ -183,6 +224,12 @@ def parse_nfse_xml(xml_content: str) -> DanfseXmlSummary:
         prestador_endereco=_montar_endereco(inf, "emit/enderNac"),
         tomador_endereco=_montar_endereco(inf, "DPS/infDPS/toma/end"),
         tomador_municipio=tomador_mun,
+        intermediario_nome=interm["nome"],
+        intermediario_documento=interm["documento"],
+        intermediario_endereco=interm["endereco"],
+        intermediario_municipio=interm["municipio"],
+        chave_nfse_substituida=ch_subst,
+        motivo_substituicao=motivo_subst,
         informacoes_complementares=_find_text(inf, "DPS/infDPS/serv/infoCompl/xInfComp", ""),
         ambiente_homologacao=(tp_amb == "2"),
         qrcode_url=qrcode_url,
@@ -197,12 +244,18 @@ def xml_summary_to_pdf_document(summary: DanfseXmlSummary) -> DanfsePdfDocument:
     total_rtc = (valor_ibs + valor_cbs).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
     liquido_rtc = (valor_serv + total_rtc).quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
 
-    obs_base = summary.informacoes_complementares.strip()
-    obs_auth = (
+    obs_partes = []
+    if summary.chave_nfse_substituida:
+        obs_subst = f"NFS-e substituta da chave {summary.chave_nfse_substituida}"
+        if summary.motivo_substituicao:
+            obs_subst += f" ({summary.motivo_substituicao})"
+        obs_partes.append(obs_subst)
+    if summary.informacoes_complementares.strip():
+        obs_partes.append(summary.informacoes_complementares.strip())
+    obs_partes.append(
         "A autenticidade desta NFS-e pode ser verificada pela leitura do código QR "
         "ou pela consulta da chave de acesso no portal nacional da NFS-e."
     )
-    info_compl = f"{obs_base} | {obs_auth}" if obs_base else obs_auth
 
     return DanfsePdfDocument(
         numero_nfse=summary.numero_nfse,
@@ -231,5 +284,11 @@ def xml_summary_to_pdf_document(summary: DanfseXmlSummary) -> DanfsePdfDocument:
         valor_total_ibs_cbs=total_rtc,
         valor_liquido_nota=valor_serv,
         valor_liquido_com_rtc=liquido_rtc,
-        informacoes_complementares=info_compl,
+        informacoes_complementares=" | ".join(obs_partes),
+        intermediario_nome=summary.intermediario_nome,
+        intermediario_documento=summary.intermediario_documento,
+        intermediario_municipio=summary.intermediario_municipio,
+        intermediario_endereco=summary.intermediario_endereco,
+        chave_nfse_substituida=summary.chave_nfse_substituida,
+        motivo_substituicao=summary.motivo_substituicao,
     )

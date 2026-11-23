@@ -111,14 +111,41 @@ def _render_party_section(
     y: float,
     content_w: float,
 ) -> float:
-    r_h = 9.5 * mm
+    r_h = 9.0 * mm
     y = draw_section_header(c, margin, y, content_w, title)
     draw_cell(c, margin, y, content_w * 0.62, r_h, "Nome / Nome Empresarial", nome, bold_value=True)
     draw_cell(c, margin + content_w * 0.62, y, content_w * 0.38, r_h, "CNPJ / CPF / NIF", documento, bold_value=True)
     y -= r_h
     draw_cell(c, margin, y, content_w * 0.62, r_h, "Endereço", endereco)
     draw_cell(c, margin + content_w * 0.62, y, content_w * 0.38, r_h, "Município / Sigla UF", municipio)
-    return y - r_h - 2.5 * mm
+    return y - r_h - 2.0 * mm
+
+
+def _render_substituicao_section(
+    c: Canvas, doc: DanfsePdfDocument, margin: float, y: float, content_w: float
+) -> float:
+    r_h = 8.5 * mm
+    y = draw_section_header(c, margin, y, content_w, "SUBSTITUIÇÃO DE NFS-E (NT 008)")
+    draw_cell(
+        c,
+        margin,
+        y,
+        content_w * 0.62,
+        r_h,
+        "Chave da NFS-e Substituída",
+        doc.chave_nfse_substituida,
+        bold_value=True,
+    )
+    draw_cell(
+        c,
+        margin + content_w * 0.62,
+        y,
+        content_w * 0.38,
+        r_h,
+        "Motivo da Substituição",
+        doc.motivo_substituicao or "-",
+    )
+    return y - r_h - 2.0 * mm
 
 
 def _render_canhoto(c: Canvas, doc: DanfsePdfDocument, margin: float, content_w: float) -> None:
@@ -154,7 +181,7 @@ def renderizar_danfse_pdf(doc: DanfsePdfDocument) -> bytes:
     page_w, page_h = A4
     margin = 12 * mm
     content_w = page_w - 2 * margin
-    r_h = 9.5 * mm
+    r_h = 9.0 * mm
     col_w = content_w / 4
 
     c = Canvas(buffer, pagesize=A4)
@@ -164,50 +191,35 @@ def renderizar_danfse_pdf(doc: DanfsePdfDocument) -> bytes:
 
     y = _render_header(c, doc, margin, page_h - margin, content_w)
     y = _render_party_section(
-        c,
-        "PRESTADOR / FORNECEDOR",
-        doc.prestador_nome,
-        doc.prestador_documento,
-        doc.prestador_endereco,
-        doc.prestador_municipio,
-        margin,
-        y,
-        content_w,
+        c, "PRESTADOR / FORNECEDOR", doc.prestador_nome, doc.prestador_documento,
+        doc.prestador_endereco, doc.prestador_municipio, margin, y, content_w,
     )
     y = _render_party_section(
-        c,
-        "TOMADOR / ADQUIRENTE",
-        doc.tomador_nome,
-        doc.tomador_documento,
-        doc.tomador_endereco,
-        doc.tomador_municipio,
-        margin,
-        y,
-        content_w,
+        c, "TOMADOR / ADQUIRENTE", doc.tomador_nome, doc.tomador_documento,
+        doc.tomador_endereco, doc.tomador_municipio, margin, y, content_w,
     )
+    if doc.intermediario_nome or doc.intermediario_documento:
+        y = _render_party_section(
+            c, "INTERMEDIÁRIO DO SERVIÇO", doc.intermediario_nome or "-",
+            doc.intermediario_documento or "-", doc.intermediario_endereco or "-",
+            doc.intermediario_municipio or "-", margin, y, content_w,
+        )
+    if doc.chave_nfse_substituida:
+        y = _render_substituicao_section(c, doc, margin, y, content_w)
 
     # Serviço Prestado
     y = draw_section_header(c, margin, y, content_w, "SERVIÇO PRESTADO")
     draw_cell(c, margin, y, content_w * 0.50, r_h, "Local da Prestação / Sigla UF", doc.local_prestacao)
     draw_cell(
-        c,
-        margin + content_w * 0.50,
-        y,
-        content_w * 0.50,
-        r_h,
-        "Código de Tributação Nacional / NBS",
-        doc.codigo_tributacao,
+        c, margin + content_w * 0.50, y, content_w * 0.50, r_h,
+        "Código de Tributação Nacional / NBS", doc.codigo_tributacao,
     )
+    desc_min = 16 * mm if (doc.intermediario_nome or doc.chave_nfse_substituida) else 22 * mm
+    desc_max = 26 * mm if (doc.intermediario_nome or doc.chave_nfse_substituida) else 44 * mm
     y = draw_paragraph_box(
-        c,
-        margin,
-        y - r_h,
-        content_w,
-        min_h=22 * mm,
-        max_h=46 * mm,
-        label="Descrição do Serviço",
-        text=doc.discriminacao_servico,
-    ) - 2.5 * mm
+        c, margin, y - r_h, content_w, min_h=desc_min, max_h=desc_max,
+        label="Descrição do Serviço", text=doc.discriminacao_servico,
+    ) - 2.0 * mm
 
     # Tributação IBS / CBS
     y = draw_section_header(c, margin, y, content_w, "TRIBUTAÇÃO IBS / CBS (REFORMA TRIBUTÁRIA — LC 214/2025)")
@@ -224,11 +236,11 @@ def renderizar_danfse_pdf(doc: DanfsePdfDocument) -> bytes:
         c, margin + col_w * 3, y, col_w, r_h, "Total do IBS/CBS",
         formatar_moeda_br(doc.valor_total_ibs_cbs), bold_value=True, align_right=True, fill_color=COLOR_SOFT_BG,
     )
-    y -= r_h + 2.5 * mm
+    y -= r_h + 2.0 * mm
 
     # Valor Total da NFS-e
     y = draw_section_header(c, margin, y, content_w, "VALOR TOTAL DA NFS-E")
-    t_h = 11.0 * mm
+    t_h = 10.5 * mm
     draw_cell(
         c, margin, y, col_w, t_h, "VALOR DA OPERAÇÃO / SERVIÇO",
         formatar_moeda_br(doc.valor_servicos), bold_value=True, align_right=True,
@@ -245,20 +257,13 @@ def renderizar_danfse_pdf(doc: DanfsePdfDocument) -> bytes:
         c, margin + col_w * 3, y, col_w, t_h, "VALOR LÍQUIDO + IBS/CBS",
         formatar_moeda_br(doc.valor_liquido_com_rtc), bold_value=True, align_right=True, fill_color=COLOR_SOFT_BG,
     )
-    y -= t_h + 2.5 * mm
+    y -= t_h + 2.0 * mm
 
     # Informações Complementares
     y = draw_section_header(c, margin, y, content_w, "INFORMAÇÕES COMPLEMENTARES")
     draw_paragraph_box(
-        c,
-        margin,
-        y,
-        content_w,
-        min_h=16 * mm,
-        max_h=30 * mm,
-        label="Observações e Autenticidade",
-        text=doc.informacoes_complementares,
-        style=STYLE_SMALL,
+        c, margin, y, content_w, min_h=14 * mm, max_h=24 * mm,
+        label="Observações e Autenticidade", text=doc.informacoes_complementares, style=STYLE_SMALL,
     )
 
     _render_canhoto(c, doc, margin, content_w)

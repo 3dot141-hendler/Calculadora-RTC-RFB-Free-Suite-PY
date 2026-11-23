@@ -135,3 +135,9 @@ class DanfsePdfDocument:
     valor_liquido_nota: Decimal
     valor_liquido_com_rtc: Decimal
     informacoes_complementares: str
+    intermediario_nome: str = ""
+    intermediario_documento: str = ""
+    intermediario_municipio: str = ""
+    intermediario_endereco: str = ""
+    chave_nfse_substituida: str = ""
+    motivo_substituicao: str = ""
