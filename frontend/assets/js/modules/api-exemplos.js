@@ -98,6 +98,21 @@
           situacao_stc: 0,
         },
       },
+      "danfse-pdf": {
+        method: "POST",
+        path: "/api/v1/danfse/pdf",
+        binaryPdf: true,
+        payload: {
+          numero_nfse: "2026000142",
+          prestador_cnpj: "11222333000181",
+          tomador_documento: "98765432000199",
+          discriminacao_servico: "Consultoria em adequação fiscal RTC (IBS/CBS)",
+          valor_servicos: "5000.00",
+          valor_ibs: "500.00",
+          valor_cbs: "440.00",
+          situacao_stc: 0,
+        },
+      },
       "tabelas-ibge": {
         method: "GET",
         path: "/api/v1/tabelas/localidades?uf=RS&nome=Porto&limit=5",
@@ -112,7 +127,8 @@
       return `curl -X GET "${url}" \\\n  -H "Accept: application/json"`;
     }
     const body = JSON.stringify(ep.payload, null, 2);
-    return `curl -X POST "${url}" \\\n  -H "Content-Type: application/json" \\\n  -d '${body}'`;
+    const outFlag = ep.binaryPdf ? " \\\n  --output DANFSE_2026000142.pdf" : "";
+    return `curl -X POST "${url}" \\\n  -H "Content-Type: application/json" \\\n  -d '${body}'${outFlag}`;
   }
 
   function buildPython(baseUrl, ep) {
@@ -131,6 +147,13 @@
       .replace(/\btrue\b/g, "True")
       .replace(/\bfalse\b/g, "False")
       .replace(/\bnull\b/g, "None");
+    const outputLines = ep.binaryPdf
+      ? [
+          'with open("DANFSE_2026000142.pdf", "wb") as f:',
+          "    f.write(response.content)",
+          'print("PDF salvo com sucesso:", len(response.content), "bytes")',
+        ]
+      : ["print(response.json())"];
     return [
       "import requests",
       "",
@@ -139,7 +162,7 @@
       "",
       "response = requests.post(url, json=payload, timeout=10)",
       "response.raise_for_status()",
-      "print(response.json())",
+      ...outputLines,
     ].join("\n");
   }
 
@@ -154,6 +177,12 @@
       ].join("\n");
     }
     const jsPayload = JSON.stringify(ep.payload, null, 2);
+    const parseLines = ep.binaryPdf
+      ? [
+          "const pdfBlob = await response.blob();",
+          'console.log("PDF recebido:", pdfBlob.size, "bytes");',
+        ]
+      : ["const data = await response.json();", "console.log(data);"];
     return [
       `const payload = ${jsPayload};`,
       "",
@@ -164,8 +193,7 @@
       "});",
       "",
       "if (!response.ok) throw new Error(`HTTP ${response.status}`);",
-      "const data = await response.json();",
-      "console.log(data);",
+      ...parseLines,
     ].join("\n");
   }
 
@@ -182,6 +210,9 @@
       ].join("\n");
     }
     const jsonEscaped = JSON.stringify(ep.payload, null, 2);
+    const outLine = ep.binaryPdf
+      ? 'file_put_contents("DANFSE_2026000142.pdf", $response);'
+      : "print_r(json_decode($response, true));";
     return [
       "<?php",
       "$payload = <<<'JSON'",
@@ -198,7 +229,7 @@
       "",
       "$response = curl_exec($ch);",
       "curl_close($ch);",
-      "print_r(json_decode($response, true));",
+      outLine,
     ].join("\n");
   }
 
@@ -282,10 +313,31 @@
               };
         const res = await fetch(ep.path, options);
         const elapsed = Math.round(performance.now() - t0);
-        const data = await res.json();
+        const contentType = res.headers.get("Content-Type") || "";
 
         liveMeta.className = res.ok ? "badge text-bg-success" : "badge text-bg-danger";
         liveMeta.textContent = `HTTP ${res.status} • ${elapsed} ms`;
+
+        if (res.ok && contentType.includes("application/pdf")) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "DANFSE_2026000142.pdf";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+          liveResponse.textContent = [
+            `Content-Type: ${contentType}`,
+            `Content-Disposition: ${res.headers.get("Content-Disposition") || "-"}`,
+            `Tamanho do PDF binário: ${blob.size} bytes`,
+            "Download automático iniciado: DANFSE_2026000142.pdf",
+          ].join("\n");
+          return;
+        }
+
+        const data = await res.json();
         liveResponse.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
         liveMeta.className = "badge text-bg-danger";
