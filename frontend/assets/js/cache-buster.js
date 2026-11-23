@@ -41,8 +41,8 @@
    */
   async function bustUrl(url) {
     const version = await resolveMtime(url);
-    const separator = url.includes("?") ? "&" : "?";
-    return `${url.split("?")[0]}${separator}v=${encodeURIComponent(version)}`;
+    const cleanUrl = url.split("?")[0];
+    return `${cleanUrl}?v=${encodeURIComponent(version)}`;
   }
 
   /**
@@ -79,4 +79,3 @@
     applyDynamicCacheBusting();
   }
 })(window, document);
-

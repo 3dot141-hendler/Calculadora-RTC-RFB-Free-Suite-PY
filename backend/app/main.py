@@ -5,12 +5,24 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 
 from app.core.config import get_settings
+from app.modules.comparador.router import router as comparador_router
 from app.modules.danfse.router import router as danfse_router
 from app.modules.regime_regular.router import router as regime_regular_router
 from app.modules.simples.router import router as simples_router
 from app.modules.tabelas_oficiais.router import router as tabelas_router
+
+
+class _RevalidatingStaticFiles(StaticFiles):
+    """StaticFiles com Cache-Control no-cache para HTML/CSS/JS (paridade com nginx.conf)."""
+
+    async def get_response(self, path: str, scope) -> Response:  # type: ignore[override]
+        response = await super().get_response(path, scope)
+        if path.endswith((".html", ".css", ".js")) or path in ("", "."):
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
 
 
 def create_app() -> FastAPI:
@@ -22,7 +34,8 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         description=(
             "Suite open-source unificada para cálculos da Reforma Tributária (RTC) "
-            "da Receita Federal: Simples Nacional, Regime Regular e Gerador DANFSE."
+            "da Receita Federal: Simples Nacional, Regime Regular, Comparador Tributário "
+            "(Simples vs. Híbrido vs. Regular), Gerador DANFSE e Tabelas Oficiais."
         ),
         docs_url="/api/docs",
         redoc_url="/api/redoc",
@@ -50,6 +63,7 @@ def create_app() -> FastAPI:
 
     api_router.include_router(simples_router)
     api_router.include_router(regime_regular_router)
+    api_router.include_router(comparador_router)
     api_router.include_router(danfse_router)
     api_router.include_router(tabelas_router)
 
@@ -59,7 +73,7 @@ def create_app() -> FastAPI:
     if settings.serve_frontend and settings.frontend_dir.exists():
         application.mount(
             "/",
-            StaticFiles(directory=str(settings.frontend_dir), html=True),
+            _RevalidatingStaticFiles(directory=str(settings.frontend_dir), html=True),
             name="frontend",
         )
 
