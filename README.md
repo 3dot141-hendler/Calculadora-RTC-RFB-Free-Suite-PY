@@ -2,27 +2,26 @@
 
 Ecossistema open-source unificado em **Python (FastAPI)**, **Docker** e **Bootstrap 5.3** para substituir e unificar as calculadoras oficiais da Reforma Tributária (RTC) da Receita Federal:
 
-1. **Comparador Tributário** (`/api/v1/comparador`) — Simulação lado a lado entre Simples Nacional (DAS), Simples Híbrido (por fora) e Regime Regular com impacto de crédito B2B.
-2. **Simples Nacional** (`/api/v1/simples`) — Ref.: `ReceitaFederal/calculadora-rtc-simples-nacional` (LC 123/2006 + NT 2026.005).
-3. **Regime Regular** (`/api/v1/regime-regular`) — Ref.: `ReceitaFederal/calculadora-rtc-regime-regular` (IBS/CBS/IS, Base de Cálculo e Operação multi-item).
-4. **Gerador DANFSE** (`/api/v1/danfse`) — Ref.: `ReceitaFederal/calculadora-rtc-gerador-danfse` (Parser XML seguro com proteção XXE e prévia imprimível).
-5. **Tabelas Oficiais** (`/api/v1/tabelas`) — Catálogo SQLite somente-leitura (`CST/cClassTrib`, `cAtivSN`, fatores de compra gov e 5.525 municípios IBGE).
+1. **Comparador Tributário** (`/api/v1/comparador`) — Simulação lado a lado entre Simples Nacional (DAS), Simples Híbrido e Regime Regular com impacto B2B, **Fator R (Anexo III vs. V)**, comparador **Lucro Presumido vs. Lucro Real** e relatório executivo imprimível em 1 página A4.
+2. **Simples Nacional** (`/api/v1/simples`) — Ref.: `ReceitaFederal/calculadora-rtc-simples-nacional` (LC 123/2006 Anexos I–V, NT 2026.005, operação multi-itens em lote e observabilidade `VSN-*`).
+3. **Regime Regular** (`/api/v1/regime-regular`) — Ref.: `ReceitaFederal/calculadora-rtc-regime-regular` (IBS/CBS/IS, crédito presumido, redução de base, compra governamental, motor seguro AST `ADR001` e Bases Unificadas NF-e/NFC-e e NFS-e/Locação 99.03).
+4. **Gerador DANFSe v2.0** (`/api/v1/danfse`) — Ref.: `ReceitaFederal/calculadora-rtc-gerador-danfse` (Parser XML seguro XXE com blocos `IBSCBS`, `interm` e `subst`, PDF binário nativo em ReportLab + QR Code vetorial NT 008).
+5. **Tabelas Oficiais** (`/api/v1/tabelas`) — Catálogo SQLite somente-leitura (`27 UFs`, `164 CST/cClassTrib`, `15 cAtivSN`, `334 NCM IS`, `118 NBS`, `43 Tratamentos ADR001`, tabelas V0019 e `5.525 municípios IBGE`).
 
 ## Estrutura do Monorepo
 
 - `references/` — Códigos originais da RFB mantidos na branch `originals` apenas para consulta.
-- `backend/` — API modular FastAPI com validação estrita em Pydantic, arredondamento `HALF_EVEN` e testes Pytest.
-- `frontend/` — Interface web HTML5 semântica, Bootstrap 5.3, carregamento modular de partials, cache-busting dinâmico (`?v={mtime}`) e sidebar flexível com modo mini.
-- `scripts/` e `docs/` — Automação e documentação do Git Flow (`originals`, `development`, `staging`, `main`).
+- `backend/` — API modular FastAPI com validação estrita em Pydantic, arredondamento `HALF_EVEN` e suíte Pytest (`79 passed`).
+- `frontend/` — Interface web HTML5 semântica, Bootstrap 5.3, carregamento modular de partials, cache-busting dinâmico (`?v={mtime}`), formatação PT-BR e sidebar flexível com modo mini.
+- `scripts/` e `docs/` — Sincronização automatizada do SQLite (`scripts/sync_rfb_sqlite.py`) e documentação do Git Flow (`originals`, `development`, `staging`, `main`).
 - `docker-compose.yml` — Orquestração integrada (Backend FastAPI + Frontend Nginx) para homologação na branch `staging`.
 
 ## Execução Local (Desenvolvimento)
 
 ```powershell
 .venv\Scripts\pip.exe install -r backend\requirements-dev.txt
-cd backend
-..\.venv\Scripts\pytest.exe
-..\.venv\Scripts\uvicorn.exe app.main:app --reload
+.venv\Scripts\python.exe -m pytest backend\tests -q
+.venv\Scripts\uvicorn.exe --app-dir backend app.main:app --reload
 ```
 
 Acesse:
@@ -42,7 +41,7 @@ curl -X POST "http://localhost:8000/api/v1/comparador/simular" \
     "receita_bruta_12m": "720000.00",
     "valor_operacao": "50000.00",
     "anexo": "I",
-    "uf": "SP",
+    "uf": "RS",
     "c_class_trib": "000001",
     "creditos_anteriores": "4500.00",
     "percentual_vendas_b2b": "100.00"
@@ -60,7 +59,7 @@ response = requests.post(
         "receita_bruta_12m": "720000.00",
         "valor_operacao": "50000.00",
         "anexo": "I",
-        "uf": "SP",
+        "uf": "RS",
         "c_class_trib": "000001",
         "creditos_anteriores": "4500.00",
         "percentual_vendas_b2b": "100.00",
@@ -81,7 +80,7 @@ const response = await fetch("http://localhost:8000/api/v1/comparador/simular", 
     receita_bruta_12m: "720000.00",
     valor_operacao: "50000.00",
     anexo: "I",
-    uf: "SP",
+    uf: "RS",
     c_class_trib: "000001",
     creditos_anteriores: "4500.00",
     percentual_vendas_b2b: "100.00",
@@ -99,7 +98,7 @@ $payload = json_encode([
     "receita_bruta_12m" => "720000.00",
     "valor_operacao" => "50000.00",
     "anexo" => "I",
-    "uf" => "SP",
+    "uf" => "RS",
     "c_class_trib" => "000001",
     "creditos_anteriores" => "4500.00",
     "percentual_vendas_b2b" => "100.00",
