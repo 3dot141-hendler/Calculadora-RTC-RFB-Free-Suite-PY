@@ -20,8 +20,9 @@
   }
 
   function formatPctLabel(value) {
+    if (value === null || value === undefined || value === "") return "-";
     const num = Number(value);
-    if (Number.isNaN(num)) return `${value ?? "0,00"}%`;
+    if (Number.isNaN(num)) return `${value}%`;
     return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
   }
 
@@ -62,13 +63,87 @@
     });
   }
 
+  async function carregarCatalogoAvancado(dataIso, queryText = "") {
+    const dataIs = dataIso < "2027-01-01" ? "2027-01-01" : dataIso;
+    const pNcm = new URLSearchParams({ data_fato_gerador: dataIs, limit: "50" });
+    const pNbs = new URLSearchParams({ data_fato_gerador: dataIso, limit: "50" });
+    const pTrat = new URLSearchParams({ data_fato_gerador: dataIso, limit: "50" });
+    if (queryText.trim()) {
+      pNcm.set("q", queryText.trim());
+      pNbs.set("q", queryText.trim());
+      pTrat.set("q", queryText.trim());
+    }
+
+    const [ncmRes, nbsRes, tratRes] = await Promise.all([
+      fetch(`${API_BASE}/ncm-is?${pNcm.toString()}`),
+      fetch(`${API_BASE}/nbs?${pNbs.toString()}`),
+      fetch(`${API_BASE}/tratamentos-tributarios?${pTrat.toString()}`),
+    ]);
+
+    const ncmBody = document.getElementById("tabelasNcmBody");
+    if (ncmBody && ncmRes.ok) {
+      const ncms = await ncmRes.json();
+      setBadgeCount("tabelasNcmCount", ncms.length);
+      ncmBody.replaceChildren();
+      ncms.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          createCell(item.ncm, "fw-semibold text-nowrap"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(formatPctLabel(item.aliquota_ad_valorem), "text-end small text-nowrap"),
+          createCell(item.aliquota_ad_rem ? `R$ ${item.aliquota_ad_rem}` : "-", "text-end small text-nowrap"),
+          createCell(`${item.inicio_vigencia}..${item.fim_vigencia || "∞"}`, "small text-nowrap text-muted")
+        );
+        ncmBody.appendChild(tr);
+      });
+    }
+
+    const nbsBody = document.getElementById("tabelasNbsBody");
+    if (nbsBody && nbsRes.ok) {
+      const nbss = await nbsRes.json();
+      setBadgeCount("tabelasNbsCount", nbss.length);
+      nbsBody.replaceChildren();
+      nbss.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          createCell(item.nbs, "fw-semibold text-nowrap"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(item.item_lc116 || "-", "small text-nowrap"),
+          createCell(item.c_class_trib || "-", "small text-nowrap")
+        );
+        nbsBody.appendChild(tr);
+      });
+    }
+
+    const tratBody = document.getElementById("tabelasTratBody");
+    if (tratBody && tratRes.ok) {
+      const trats = await tratRes.json();
+      setBadgeCount("tabelasTratCount", trats.length);
+      tratBody.replaceChildren();
+      trats.forEach((item) => {
+        const tr = document.createElement("tr");
+        const expr = item.expressao_tributo_calculado || item.expressao_base_calculo || "-";
+        const flags = `${item.possui_reducao ? "Red" : "-"} / ${item.possui_monofasia ? "Mono" : "-"}`;
+        tr.append(
+          createCell(String(item.id), "fw-semibold"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(expr, "small font-monospace text-ellipsis-cell", expr),
+          createCell(flags, "small text-nowrap")
+        );
+        tratBody.appendChild(tr);
+      });
+    }
+  }
+
   async function carregarTabelas(dataIso) {
     const query = `?data_fato_gerador=${encodeURIComponent(dataIso)}`;
     const cstCode = document.getElementById("cstCodeFilter")?.value || "";
     const cstQuery = document.getElementById("cstQueryFilter")?.value || "";
+    const avQuery = document.getElementById("avancadoQueryFilter")?.value || "";
 
-    const [, ativRes, ufsRes, govRes] = await Promise.all([
+    const [, , ativRes, ufsRes, govRes] = await Promise.all([
       carregarCsts(dataIso, cstCode, cstQuery),
+      carregarCatalogoAvancado(dataIso, avQuery),
       fetch(`${API_BASE}/atividades-simples${query}`),
       fetch(`${API_BASE}/ufs${query}`),
       fetch(`${API_BASE}/compra-gov-simples${query}`),
@@ -165,6 +240,15 @@
       cstForm.addEventListener("submit", (e) => {
         e.preventDefault();
         carregarCsts(dateInput.value, cstCode.value, cstQuery.value);
+      });
+    }
+
+    const avForm = document.getElementById("avancadoSearchForm");
+    const avQuery = document.getElementById("avancadoQueryFilter");
+    if (avForm && avQuery && dateInput) {
+      avForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        carregarCatalogoAvancado(dateInput.value, avQuery.value);
       });
     }
 
