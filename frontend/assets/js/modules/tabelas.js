@@ -6,50 +6,180 @@
 
   const API_BASE = "/api/v1/tabelas";
 
-  function createCell(text, className = "") {
+  function createCell(text, className = "", fullTooltip = "") {
     const td = document.createElement("td");
     if (className) td.className = className;
     td.textContent = text ?? "-";
+    if (fullTooltip) td.dataset.tooltipFull = fullTooltip;
     return td;
+  }
+
+  function setBadgeCount(id, count) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(count);
+  }
+
+  function formatPctLabel(value) {
+    if (value === null || value === undefined || value === "") return "-";
+    const num = Number(value);
+    if (Number.isNaN(num)) return `${value}%`;
+    return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  }
+
+  async function carregarCsts(dataIso, cstCode = "", queryText = "") {
+    const params = new URLSearchParams({ data_fato_gerador: dataIso });
+    if (cstCode && cstCode.trim().length === 3) params.set("cst", cstCode.trim());
+    if (queryText && queryText.trim().length >= 1) params.set("q", queryText.trim());
+
+    const res = await fetch(`${API_BASE}/cst?${params.toString()}`);
+    const cstBody = document.getElementById("tabelasCstBody");
+    if (!cstBody || !res.ok) return;
+
+    const csts = await res.json();
+    setBadgeCount("tabelasCstCount", csts.length);
+    cstBody.replaceChildren();
+
+    if (!csts.length) {
+      const tr = document.createElement("tr");
+      const td = createCell("Nenhuma classificação encontrada para o filtro informado.", "text-muted small text-center py-3");
+      td.colSpan = 4;
+      tr.appendChild(td);
+      cstBody.appendChild(tr);
+      return;
+    }
+
+    csts.forEach((item) => {
+      const tr = document.createElement("tr");
+      tr.append(
+        createCell(item.cst, "fw-semibold"),
+        createCell(item.c_class_trib, "text-nowrap"),
+        createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+        createCell(
+          `${formatPctLabel(item.aliquota_reducao_ibs)} / ${formatPctLabel(item.aliquota_reducao_cbs)}`,
+          "text-end small text-nowrap"
+        )
+      );
+      cstBody.appendChild(tr);
+    });
+  }
+
+  async function carregarCatalogoAvancado(dataIso, queryText = "") {
+    const dataIs = dataIso < "2027-01-01" ? "2027-01-01" : dataIso;
+    const pNcm = new URLSearchParams({ data_fato_gerador: dataIs, limit: "50" });
+    const pNbs = new URLSearchParams({ data_fato_gerador: dataIso, limit: "50" });
+    const pTrat = new URLSearchParams({ data_fato_gerador: dataIso, limit: "50" });
+    if (queryText.trim()) {
+      pNcm.set("q", queryText.trim());
+      pNbs.set("q", queryText.trim());
+      pTrat.set("q", queryText.trim());
+    }
+
+    const [ncmRes, nbsRes, tratRes] = await Promise.all([
+      fetch(`${API_BASE}/ncm-is?${pNcm.toString()}`),
+      fetch(`${API_BASE}/nbs?${pNbs.toString()}`),
+      fetch(`${API_BASE}/tratamentos-tributarios?${pTrat.toString()}`),
+    ]);
+
+    const ncmBody = document.getElementById("tabelasNcmBody");
+    if (ncmBody && ncmRes.ok) {
+      const ncms = await ncmRes.json();
+      setBadgeCount("tabelasNcmCount", ncms.length);
+      ncmBody.replaceChildren();
+      ncms.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          createCell(item.ncm, "fw-semibold text-nowrap"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(formatPctLabel(item.aliquota_ad_valorem), "text-end small text-nowrap"),
+          createCell(item.aliquota_ad_rem ? `R$ ${item.aliquota_ad_rem}` : "-", "text-end small text-nowrap"),
+          createCell(`${item.inicio_vigencia}..${item.fim_vigencia || "∞"}`, "small text-nowrap text-muted")
+        );
+        ncmBody.appendChild(tr);
+      });
+    }
+
+    const nbsBody = document.getElementById("tabelasNbsBody");
+    if (nbsBody && nbsRes.ok) {
+      const nbss = await nbsRes.json();
+      setBadgeCount("tabelasNbsCount", nbss.length);
+      nbsBody.replaceChildren();
+      nbss.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          createCell(item.nbs, "fw-semibold text-nowrap"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(item.item_lc116 || "-", "small text-nowrap"),
+          createCell(item.c_class_trib || "-", "small text-nowrap")
+        );
+        nbsBody.appendChild(tr);
+      });
+    }
+
+    const tratBody = document.getElementById("tabelasTratBody");
+    if (tratBody && tratRes.ok) {
+      const trats = await tratRes.json();
+      setBadgeCount("tabelasTratCount", trats.length);
+      tratBody.replaceChildren();
+      trats.forEach((item) => {
+        const tr = document.createElement("tr");
+        const expr = item.expressao_tributo_calculado || item.expressao_base_calculo || "-";
+        const flags = `${item.possui_reducao ? "Red" : "-"} / ${item.possui_monofasia ? "Mono" : "-"}`;
+        tr.append(
+          createCell(String(item.id), "fw-semibold"),
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(expr, "small font-monospace text-ellipsis-cell", expr),
+          createCell(flags, "small text-nowrap")
+        );
+        tratBody.appendChild(tr);
+      });
+    }
   }
 
   async function carregarTabelas(dataIso) {
     const query = `?data_fato_gerador=${encodeURIComponent(dataIso)}`;
-    const [cstRes, ativRes, govRes] = await Promise.all([
-      fetch(`${API_BASE}/cst${query}`),
+    const cstCode = document.getElementById("cstCodeFilter")?.value || "";
+    const cstQuery = document.getElementById("cstQueryFilter")?.value || "";
+    const avQuery = document.getElementById("avancadoQueryFilter")?.value || "";
+
+    const [, , ativRes, ufsRes, govRes] = await Promise.all([
+      carregarCsts(dataIso, cstCode, cstQuery),
+      carregarCatalogoAvancado(dataIso, avQuery),
       fetch(`${API_BASE}/atividades-simples${query}`),
+      fetch(`${API_BASE}/ufs${query}`),
       fetch(`${API_BASE}/compra-gov-simples${query}`),
     ]);
-
-    const cstBody = document.getElementById("tabelasCstBody");
-    if (cstBody && cstRes.ok) {
-      const csts = await cstRes.json();
-      cstBody.replaceChildren();
-      csts.forEach((item) => {
-        const tr = document.createElement("tr");
-        tr.append(
-          createCell(item.cst, "fw-semibold"),
-          createCell(item.c_class_trib),
-          createCell(item.descricao, "small"),
-          createCell(`${item.aliquota_reducao_ibs}% / ${item.aliquota_reducao_cbs}%`, "text-end small")
-        );
-        cstBody.appendChild(tr);
-      });
-    }
 
     const ativBody = document.getElementById("tabelasAtivBody");
     if (ativBody && ativRes.ok) {
       const atividades = await ativRes.json();
+      setBadgeCount("tabelasAtivCount", atividades.length);
       ativBody.replaceChildren();
       atividades.forEach((item) => {
         const tr = document.createElement("tr");
         tr.append(
           createCell(item.codigo, "fw-semibold"),
-          createCell(item.descricao, "small"),
-          createCell(item.anexo_sem_fator_r || "Sem anexo"),
-          createCell(item.anexo_com_fator_r || "-")
+          createCell(item.descricao, "small text-ellipsis-cell", item.descricao),
+          createCell(item.anexo_sem_fator_r || "Sem anexo", "text-nowrap"),
+          createCell(item.anexo_com_fator_r || "-", "text-nowrap")
         );
         ativBody.appendChild(tr);
+      });
+    }
+
+    const ufsBody = document.getElementById("tabelasUfsBody");
+    if (ufsBody && ufsRes.ok) {
+      const ufs = await ufsRes.json();
+      setBadgeCount("tabelasUfsCount", ufs.length);
+      ufsBody.replaceChildren();
+      ufs.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.append(
+          createCell(item.uf, "fw-semibold"),
+          createCell(item.nome, "small text-ellipsis-cell", item.nome),
+          createCell(formatPctLabel(item.aliquota_ibs_uf), "text-end small text-nowrap"),
+          createCell(formatPctLabel(item.aliquota_cbs), "text-end small text-nowrap")
+        );
+        ufsBody.appendChild(tr);
       });
     }
 
@@ -81,7 +211,7 @@
       const tr = document.createElement("tr");
       tr.append(
         createCell(String(loc.codigo_ibge), "fw-semibold"),
-        createCell(loc.nome),
+        createCell(loc.nome, "text-ellipsis-cell", loc.nome),
         createCell(loc.uf_sigla),
         createCell(String(loc.uf_codigo), "text-muted")
       );
@@ -95,11 +225,31 @@
     const form = document.getElementById("tabelasFilterForm");
     const dateInput = document.getElementById("tabelasDataVigencia");
     if (form && dateInput) {
+      window.BrNumber?.applyDefaultTodayDates(form);
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         carregarTabelas(dateInput.value);
       });
       carregarTabelas(dateInput.value);
+    }
+
+    const cstForm = document.getElementById("cstSearchForm");
+    const cstCode = document.getElementById("cstCodeFilter");
+    const cstQuery = document.getElementById("cstQueryFilter");
+    if (cstForm && cstCode && cstQuery && dateInput) {
+      cstForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        carregarCsts(dateInput.value, cstCode.value, cstQuery.value);
+      });
+    }
+
+    const avForm = document.getElementById("avancadoSearchForm");
+    const avQuery = document.getElementById("avancadoQueryFilter");
+    if (avForm && avQuery && dateInput) {
+      avForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        carregarCatalogoAvancado(dateInput.value, avQuery.value);
+      });
     }
 
     const locForm = document.getElementById("localidadesSearchForm");
@@ -110,8 +260,7 @@
         e.preventDefault();
         buscarLocalidades(locUf.value, locNome.value);
       });
-      buscarLocalidades("", "");
+      buscarLocalidades("RS", "");
     }
   });
 })(window, document);
-

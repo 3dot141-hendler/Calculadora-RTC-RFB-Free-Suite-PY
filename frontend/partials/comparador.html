@@ -1,0 +1,311 @@
+<section class="row g-4" aria-label="Comparador Lado a Lado de Regimes Tributários RTC">
+  <div class="col-12">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white p-2 rounded shadow-sm border">
+      <ul class="nav nav-pills gap-2" id="comparadorTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link active fw-semibold small"
+            id="tab-simples-regular-btn"
+            data-bs-toggle="pill"
+            data-bs-target="#paneSimplesRegular"
+            type="button"
+            role="tab"
+            aria-controls="paneSimplesRegular"
+            aria-selected="true"
+          >
+            <i class="bi bi-shop me-1"></i>Até R$ 4,8 mi/ano: Simples vs. Híbrido vs. Regular
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button
+            class="nav-link fw-semibold small"
+            id="tab-presumido-real-btn"
+            data-bs-toggle="pill"
+            data-bs-target="#panePresumidoReal"
+            type="button"
+            role="tab"
+            aria-controls="panePresumidoReal"
+            aria-selected="false"
+          >
+            <i class="bi bi-buildings me-1"></i>Geral / &gt; R$ 4,8 mi/ano: Lucro Presumido vs. Lucro Real
+          </button>
+        </li>
+      </ul>
+
+      <div class="input-group input-group-sm" style="max-width: 280px;">
+        <span class="input-group-text bg-light text-muted" title="Opcional: exibido no cabeçalho do Relatório PDF">
+          <i class="bi bi-person-badge"></i>
+        </span>
+        <input
+          id="comparadorClienteNome"
+          type="text"
+          maxlength="80"
+          class="form-control form-control-sm"
+          placeholder="Empresa / Cliente (opcional no PDF)"
+          aria-label="Nome da Empresa ou Cliente para o Relatório PDF"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 tab-content" id="comparadorTabContent">
+    <!-- ABA 1: Simples vs. Híbrido vs. Regime Regular (até R$ 4,8 mi/ano) -->
+    <div class="tab-pane fade show active" id="paneSimplesRegular" role="tabpanel" aria-labelledby="tab-simples-regular-btn">
+      <div class="row g-4">
+        <div class="col-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+              <div>
+                <h2 class="h5 mb-0 fw-bold">
+                  <i class="bi bi-columns-gap text-primary me-2"></i>Simples (DAS) vs. Simples Híbrido vs. Regime Regular
+                </h2>
+                <small class="text-muted">
+                  Para ME/EPP (até R$ 4,8 mi/ano): compare carga própria, Fator R (Anexo III vs. V), créditos de insumos e crédito B2B.
+                </small>
+              </div>
+              <div class="d-flex flex-wrap gap-1" role="group" aria-label="Cenários rápidos Simples">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="comercio-b2b">
+                  <i class="bi bi-shop me-1"></i>Comércio B2B
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="servicos-ti">
+                  <i class="bi bi-code-slash me-1"></i>Serviços TI (Fator R)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-preset="saude-red60">
+                  <i class="bi bi-heart-pulse me-1"></i>Saúde (Red. 60%)
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <form id="comparadorForm" class="row g-3" novalidate>
+                <div class="col-md-3">
+                  <label for="compRbt12" class="form-label small fw-semibold">RBT12 — Últimos 12 meses (R$)</label>
+                  <input id="compRbt12" name="receita_bruta_12m" type="text" inputmode="decimal" data-br-money value="720.000,00" class="form-control form-control-sm" required />
+                  <div class="form-text" style="font-size: 0.72rem;">Faturamento acumulado 12m (teto legal R$ 4,8 mi).</div>
+                </div>
+                <div class="col-md-3">
+                  <label for="compValorOp" class="form-label small fw-semibold">Valor da Operação / Venda (R$)</label>
+                  <input id="compValorOp" name="valor_operacao" type="text" inputmode="decimal" data-br-money value="50.000,00" class="form-control form-control-sm" required />
+                  <div class="form-text" style="font-size: 0.72rem;">Base da venda/nota simulada sobre a qual o imposto incide.</div>
+                </div>
+                <div class="col-md-2">
+                  <label for="compAnexo" class="form-label small fw-semibold">Anexo LC 123</label>
+                  <select id="compAnexo" name="anexo" class="form-select form-select-sm">
+                    <option value="I" selected>Anexo I (Comércio)</option>
+                    <option value="II">Anexo II (Indústria)</option>
+                    <option value="III">Anexo III (Serviços)</option>
+                    <option value="IV">Anexo IV (Serviços)</option>
+                    <option value="V">Anexo V (Serviços)</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <label for="compData" class="form-label small fw-semibold">Data Fato Gerador</label>
+                  <input id="compData" name="data_fato_gerador" type="date" data-default-today class="form-control form-control-sm" required />
+                </div>
+                <div class="col-md-2">
+                  <label for="compUf" class="form-label small fw-semibold">UF Destino</label>
+                  <select id="compUf" name="uf" class="form-select form-select-sm">
+                    <option value="AC">AC</option><option value="AL">AL</option><option value="AM">AM</option>
+                    <option value="AP">AP</option><option value="BA">BA</option><option value="CE">CE</option>
+                    <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
+                    <option value="MA">MA</option><option value="MG">MG</option><option value="MS">MS</option>
+                    <option value="MT">MT</option><option value="PA">PA</option><option value="PB">PB</option>
+                    <option value="PE">PE</option><option value="PI">PI</option><option value="PR">PR</option>
+                    <option value="RJ">RJ</option><option value="RN">RN</option><option value="RO">RO</option>
+                    <option value="RR">RR</option><option value="RS" selected>RS</option><option value="SC">SC</option>
+                    <option value="SE">SE</option><option value="SP">SP</option><option value="TO">TO</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label for="compCClass" class="form-label small fw-semibold">Classificação Tributária (cClassTrib)</label>
+                  <select id="compCClass" name="c_class_trib" class="form-select form-select-sm">
+                    <option value="000001" selected>000001 — Tributação Integral</option>
+                    <option value="200028">200028 — Redução de 60% (Saúde/Educação)</option>
+                    <option value="200003">200003 — Alíquota Zero (Cesta Básica)</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label for="compCreditos" class="form-label small fw-semibold">Créditos de Insumos IBS/CBS (R$)</label>
+                  <input id="compCreditos" name="creditos_anteriores" type="text" inputmode="decimal" data-br-money value="4.500,00" class="form-control form-control-sm" />
+                  <div class="form-text" style="font-size: 0.72rem;">Informado pelo usuário (abatido no Híbrido e Regular).</div>
+                </div>
+                <div class="col-md-2">
+                  <label for="compIbsMun" class="form-label small fw-semibold">IBS Municipal (%)</label>
+                  <input id="compIbsMun" name="aliquota_ibs_mun" type="text" inputmode="decimal" data-br-money value="0,00" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-2">
+                  <label for="compIs" class="form-label small fw-semibold">Imposto Seletivo (%)</label>
+                  <input id="compIs" name="aliquota_is" type="text" inputmode="decimal" data-br-money value="0,00" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-2">
+                  <label for="compB2b" class="form-label small fw-semibold">Vendas B2B / PJ (%)</label>
+                  <input id="compB2b" name="percentual_vendas_b2b" type="text" inputmode="decimal" data-br-money value="100,00" class="form-control form-control-sm" />
+                </div>
+
+                <!-- Simulador de Fator R (Anexo III vs. Anexo V — Regra dos 28%) -->
+                <div class="col-12">
+                  <div class="p-2 px-3 rounded border bg-light d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" role="switch" id="compAplicarFatorR" name="aplicar_fator_r" />
+                      <label class="form-check-label small fw-semibold" for="compAplicarFatorR">
+                        Simular Fator R (Anexo III vs. V — folha ≥ 28% da RBT12)
+                      </label>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                      <label for="compFolha12m" class="small text-muted mb-0">Folha + Pró-labore 12m (R$):</label>
+                      <input
+                        id="compFolha12m"
+                        name="folha_salarios_12m"
+                        type="text"
+                        inputmode="decimal"
+                        data-br-money
+                        value="360.000,00"
+                        class="form-control form-control-sm"
+                        style="width: 155px;"
+                        disabled
+                      />
+                      <span id="compFatorRBadge" class="badge text-bg-light border text-muted">
+                        Desativado (usa Anexo selecionado)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+                  <span id="comparadorStatusText" class="small text-muted"></span>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button id="comparadorPrintBtn" type="button" class="btn btn-outline-dark btn-sm px-3" disabled>
+                      <i class="bi bi-printer me-1"></i>Imprimir / Salvar Relatório PDF
+                    </button>
+                    <button id="comparadorSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
+                      <i class="bi bi-calculator me-1"></i>Comparar Cenários Lado a Lado
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="comparadorResultadoArea" class="col-12">
+          <div class="alert alert-light border text-muted small mb-0">
+            <i class="bi bi-info-circle me-1"></i>Preencha os parâmetros e clique em <strong>Comparar Cenários Lado a Lado</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 2: Lucro Presumido vs. Lucro Real (+ IBS/CBS no Regime Regular) -->
+    <div class="tab-pane fade" id="panePresumidoReal" role="tabpanel" aria-labelledby="tab-presumido-real-btn">
+      <div class="row g-4">
+        <div class="col-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+              <div>
+                <h2 class="h5 mb-0 fw-bold">
+                  <i class="bi bi-buildings text-primary me-2"></i>Lucro Presumido vs. Lucro Real (+ IBS/CBS)
+                </h2>
+                <small class="text-muted">
+                  Sem limite de R$ 4,8 mi/ano: compare IRPJ (15% + Adicional 10%), CSLL (9%) e IBS/CBS no Regime Regular pela margem real.
+                </small>
+              </div>
+              <div class="d-flex flex-wrap gap-1" role="group" aria-label="Cenários rápidos Presumido vs Real">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-pr-preset="servicos-alta-margem">
+                  <i class="bi bi-briefcase me-1"></i>Serviços (Alta Margem)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-pr-preset="comercio-atacado">
+                  <i class="bi bi-truck me-1"></i>Atacado (Margem 4%)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-pr-preset="hospitalar-red60">
+                  <i class="bi bi-hospital me-1"></i>Hospitalar (Red. 60%)
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <form id="presumidoRealForm" class="row g-3" novalidate>
+                <div class="col-md-3">
+                  <label for="prReceita" class="form-label small fw-semibold">Receita Bruta Mensal (R$)</label>
+                  <input id="prReceita" name="receita_bruta_mensal" type="text" inputmode="decimal" data-br-money value="600.000,00" class="form-control form-control-sm" required />
+                  <div class="form-text" style="font-size: 0.72rem;">Ex.: R$ 600.000,00/mês = R$ 7,2 mi/ano (teto Presumido: R$ 78 mi/ano).</div>
+                </div>
+                <div class="col-md-3">
+                  <label for="prDespesas" class="form-label small fw-semibold">Despesas Dedutíveis Mensais (R$)</label>
+                  <input id="prDespesas" name="despesas_dedutiveis_mensais" type="text" inputmode="decimal" data-br-money value="552.000,00" class="form-control form-control-sm" required />
+                  <div class="form-text" style="font-size: 0.72rem;">CMV/CSP, folha, aluguel e despesas p/ apurar o Lucro Real.</div>
+                </div>
+                <div class="col-md-3">
+                  <label for="prAtividade" class="form-label small fw-semibold">Atividade (Presunção Lei 9.249)</label>
+                  <select id="prAtividade" name="atividade" class="form-select form-select-sm">
+                    <option value="COMERCIO_INDUSTRIA" selected>Comércio / Indústria (8% IRPJ | 12% CSLL)</option>
+                    <option value="SERVICOS_GERAIS">Serviços Gerais (32% IRPJ | 32% CSLL)</option>
+                    <option value="SERVICOS_HOSPITALARES">Serviços Hospitalares (8% IRPJ | 12% CSLL)</option>
+                    <option value="TRANSPORTE_CARGA">Transporte de Cargas (8% IRPJ | 12% CSLL)</option>
+                    <option value="TRANSPORTE_PASSAGEIROS">Transporte Passageiros (16% IRPJ | 12% CSLL)</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label for="prCreditos" class="form-label small fw-semibold">Créditos IBS/CBS Mensais (R$)</label>
+                  <input id="prCreditos" name="creditos_ibs_cbs" type="text" inputmode="decimal" data-br-money value="75.000,00" class="form-control form-control-sm" />
+                  <div class="form-text" style="font-size: 0.72rem;">Abatidos integralmente nos dois regimes (Regime Regular).</div>
+                </div>
+                <div class="col-md-3">
+                  <label for="prCClass" class="form-label small fw-semibold">Classificação Tributária (cClassTrib)</label>
+                  <select id="prCClass" name="c_class_trib" class="form-select form-select-sm">
+                    <option value="000001" selected>000001 — Tributação Integral</option>
+                    <option value="200028">200028 — Redução de 60% (Saúde/Educação)</option>
+                    <option value="200003">200003 — Alíquota Zero (Cesta Básica)</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <label for="prUf" class="form-label small fw-semibold">UF Destino</label>
+                  <select id="prUf" name="uf" class="form-select form-select-sm">
+                    <option value="AC">AC</option><option value="AL">AL</option><option value="AM">AM</option>
+                    <option value="AP">AP</option><option value="BA">BA</option><option value="CE">CE</option>
+                    <option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option>
+                    <option value="MA">MA</option><option value="MG">MG</option><option value="MS">MS</option>
+                    <option value="MT">MT</option><option value="PA">PA</option><option value="PB">PB</option>
+                    <option value="PE">PE</option><option value="PI">PI</option><option value="PR">PR</option>
+                    <option value="RJ">RJ</option><option value="RN">RN</option><option value="RO">RO</option>
+                    <option value="RR">RR</option><option value="RS" selected>RS</option><option value="SC">SC</option>
+                    <option value="SE">SE</option><option value="SP">SP</option><option value="TO">TO</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label for="prData" class="form-label small fw-semibold">Data Fato Gerador</label>
+                  <input id="prData" name="data_fato_gerador" type="date" data-default-today class="form-control form-control-sm" required />
+                </div>
+                <div class="col-md-2">
+                  <label for="prIbsMun" class="form-label small fw-semibold">IBS Municipal (%)</label>
+                  <input id="prIbsMun" name="aliquota_ibs_mun" type="text" inputmode="decimal" data-br-money value="0,00" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-2">
+                  <label for="prIs" class="form-label small fw-semibold">Imposto Seletivo (%)</label>
+                  <input id="prIs" name="aliquota_is" type="text" inputmode="decimal" data-br-money value="0,00" class="form-control form-control-sm" />
+                </div>
+
+                <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+                  <span id="presumidoRealStatusText" class="small text-muted"></span>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button id="presumidoRealPrintBtn" type="button" class="btn btn-outline-dark btn-sm px-3" disabled>
+                      <i class="bi bi-printer me-1"></i>Imprimir / Salvar Relatório PDF
+                    </button>
+                    <button id="presumidoRealSubmitBtn" type="submit" class="btn btn-primary btn-sm px-4">
+                      <i class="bi bi-calculator me-1"></i>Comparar Presumido vs. Real
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="presumidoRealResultadoArea" class="col-12">
+          <div class="alert alert-light border text-muted small mb-0">
+            <i class="bi bi-info-circle me-1"></i>Informe receita, despesas e atividade para comparar <strong>Lucro Presumido vs. Lucro Real</strong>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

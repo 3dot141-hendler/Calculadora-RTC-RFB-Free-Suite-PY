@@ -1,14 +1,17 @@
 <section class="row justify-content-center" aria-label="Gerador DANFSE RTC">
-  <div class="col-lg-8">
+  <div class="col-lg-9">
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h2 class="h6 mb-0 fw-bold">
-          <i class="bi bi-receipt text-warning me-2"></i>Gerador DANFSE (Prévia Estruturada)
+          <i class="bi bi-receipt text-warning me-2"></i>Gerador DANFSE v2.0 (Prévia &amp; PDF Oficial com QR Code)
         </h2>
-        <span class="badge text-bg-warning text-dark">POST /api/v1/danfse/preview</span>
+        <div class="d-flex gap-1">
+          <span class="badge text-bg-warning text-dark">POST /api/v1/danfse/preview</span>
+          <span class="badge text-bg-dark">POST /api/v1/danfse/pdf</span>
+        </div>
       </div>
       <div class="card-body">
-        <form id="danfseForm" class="row g-3">
+        <form id="danfseForm" class="row g-3" novalidate>
           <div class="col-md-4">
             <label for="numero_nfse" class="form-label">Número NFS-e</label>
             <input type="text" class="form-control" id="numero_nfse" name="numero_nfse" value="20260001" required />
@@ -34,15 +37,15 @@
           </div>
           <div class="col-md-3">
             <label for="valor_servicos" class="form-label">Valor dos Serviços (R$)</label>
-            <input type="number" step="0.01" min="0.01" class="form-control" id="valor_servicos" name="valor_servicos" value="5000.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_servicos" name="valor_servicos" value="5.000,00" required />
           </div>
           <div class="col-md-3">
             <label for="valor_ibs" class="form-label">Valor IBS (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="valor_ibs" name="valor_ibs" value="150.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_ibs" name="valor_ibs" value="150,00" required />
           </div>
           <div class="col-md-3">
             <label for="valor_cbs" class="form-label">Valor CBS (R$)</label>
-            <input type="number" step="0.01" min="0" class="form-control" id="valor_cbs" name="valor_cbs" value="100.00" required />
+            <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_cbs" name="valor_cbs" value="100,00" required />
           </div>
           <div class="col-md-3">
             <label for="situacao_stc" class="form-label">Situação (STC)</label>
@@ -52,9 +55,12 @@
               <option value="2">2 - Cancelada</option>
             </select>
           </div>
-          <div class="col-12">
+          <div class="col-12 d-flex flex-wrap gap-2">
             <button type="submit" class="btn btn-warning text-dark fw-semibold">
               <i class="bi bi-file-earmark-check me-1"></i>Gerar Prévia DANFSE
+            </button>
+            <button type="button" id="danfseDownloadPdfBtn" class="btn btn-dark fw-semibold">
+              <i class="bi bi-file-earmark-pdf-fill me-1"></i>Baixar PDF Oficial (QR Code)
             </button>
           </div>
         </form>
@@ -64,11 +70,14 @@
     </div>
 
     <div class="card shadow-sm border-0 mt-4">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h2 class="h6 mb-0 fw-bold">
-          <i class="bi bi-filetype-xml text-warning me-2"></i>Importar XML NFS-e Nacional (Parser Seguro XXE)
+          <i class="bi bi-filetype-xml text-warning me-2"></i>Importar XML NFS-e Nacional (Parser Seguro XXE &amp; PDF)
         </h2>
-        <span class="badge text-bg-warning text-dark">POST /api/v1/danfse/parse-xml</span>
+        <div class="d-flex gap-1">
+          <span class="badge text-bg-warning text-dark">POST /api/v1/danfse/parse-xml</span>
+          <span class="badge text-bg-dark">POST /api/v1/danfse/pdf-from-xml</span>
+        </div>
       </div>
       <div class="card-body">
         <form id="danfseXmlForm" class="row g-3">
@@ -76,20 +85,23 @@
             <div class="d-flex justify-content-between align-items-center mb-1">
               <label for="danfseXmlInput" class="form-label mb-0">XML da NFS-e</label>
               <button type="button" id="loadSampleXmlBtn" class="btn btn-sm btn-link p-0">
-                Carregar XML de exemplo
+                Carregar XML de exemplo (RS + IBS/CBS)
               </button>
             </div>
             <textarea
               class="form-control font-monospace small"
               id="danfseXmlInput"
-              rows="5"
+              rows="6"
               placeholder="Cole aqui o XML <NFSe> padrão nacional..."
               required
             ></textarea>
           </div>
-          <div class="col-12">
+          <div class="col-12 d-flex flex-wrap gap-2">
             <button type="submit" class="btn btn-outline-warning text-dark fw-semibold">
               <i class="bi bi-file-earmark-code me-1"></i>Extrair &amp; Visualizar DANFSE
+            </button>
+            <button type="button" id="danfseXmlPdfBtn" class="btn btn-dark fw-semibold">
+              <i class="bi bi-file-earmark-pdf-fill me-1"></i>Baixar PDF Oficial do XML (QR Code)
             </button>
           </div>
         </form>
@@ -99,4 +111,3 @@
     </div>
   </div>
 </section>
-

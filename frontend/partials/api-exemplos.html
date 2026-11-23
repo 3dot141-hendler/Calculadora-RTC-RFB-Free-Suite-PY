@@ -1,0 +1,101 @@
+<section class="row g-4" aria-label="Exemplos prontos de consumo da API REST">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+        <div>
+          <h2 class="h5 mb-0 fw-bold">
+            <i class="bi bi-code-square text-primary me-2"></i>Exemplos Prontos de Integração (API REST)
+          </h2>
+          <small class="text-muted">
+            Snippets prontos em <strong>cURL, Python, JavaScript/Node.js e PHP</strong> para ERPs, PDVs e sistemas contábeis.
+          </small>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="/api/docs" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-braces me-1"></i>Abrir Swagger UI
+          </a>
+          <a href="/api/redoc" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-book me-1"></i>ReDoc
+          </a>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="row g-3 align-items-end mb-4">
+          <div class="col-md-6">
+            <label for="apiEndpointSelect" class="form-label small fw-semibold">Selecione o Endpoint</label>
+            <select id="apiEndpointSelect" class="form-select form-select-sm">
+              <option value="comparador" selected>POST /api/v1/comparador/simular — Comparador (Simples vs. Híbrido vs. Regular)</option>
+              <option value="presumido-real">POST /api/v1/comparador/presumido-vs-real — Lucro Presumido vs. Lucro Real (+ IBS/CBS)</option>
+              <option value="simples-das">POST /api/v1/simples/calcular — Simples Nacional (LC 123/2006)</option>
+              <option value="simples-item">POST /api/v1/simples/calcular-item — Simples por Item (NT 2026.005)</option>
+              <option value="regime-operacao">POST /api/v1/regime-regular/calcular-operacao — Regime Regular Multi-item</option>
+              <option value="danfse-preview">POST /api/v1/danfse/preview — Prévia e Validação DANFSE</option>
+              <option value="danfse-pdf">POST /api/v1/danfse/pdf — PDF Binário Oficial DANFSe v2.0 + QR Code</option>
+              <option value="tabelas-ibge">GET /api/v1/tabelas/localidades — Catálogo IBGE (5.525 municípios)</option>
+            </select>
+          </div>
+
+          <div class="col-md-4">
+            <label for="apiBaseUrlInput" class="form-label small fw-semibold">URL Base da API</label>
+            <input
+              id="apiBaseUrlInput"
+              type="url"
+              class="form-control form-control-sm font-monospace"
+              placeholder="http://localhost:8000"
+            />
+          </div>
+
+          <div class="col-md-2 d-grid">
+            <button id="apiTestLiveBtn" type="button" class="btn btn-sm btn-success">
+              <i class="bi bi-play-fill me-1"></i>Testar Agora
+            </button>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <ul class="nav nav-pills nav-sm gap-1" id="apiLangTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active py-1 px-3 small" type="button" data-lang="curl">
+                <i class="bi bi-terminal me-1"></i>cURL
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link py-1 px-3 small" type="button" data-lang="python">
+                <i class="bi bi-filetype-py me-1"></i>Python
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link py-1 px-3 small" type="button" data-lang="javascript">
+                <i class="bi bi-filetype-js me-1"></i>JS / Node.js
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link py-1 px-3 small" type="button" data-lang="php">
+                <i class="bi bi-filetype-php me-1"></i>PHP
+              </button>
+            </li>
+          </ul>
+
+          <button id="apiCopySnippetBtn" type="button" class="btn btn-sm btn-outline-dark">
+            <i class="bi bi-clipboard me-1"></i>Copiar Código
+          </button>
+        </div>
+
+        <pre class="bg-dark text-light rounded p-3 mb-0 overflow-auto" style="max-height: 400px;"><code id="apiSnippetCode" class="small"></code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+        <span class="small fw-bold"><i class="bi bi-activity text-success me-2"></i>Resposta ao Vivo da API</span>
+        <span id="apiLiveMeta" class="badge text-bg-light border text-dark">Aguardando teste</span>
+      </div>
+      <div class="card-body">
+        <pre id="apiLiveResponse" class="bg-light border rounded p-3 mb-0 small overflow-auto" style="max-height: 360px;">Clique em "Testar Agora" para executar o exemplo diretamente na API local e inspecionar o retorno.</pre>
+      </div>
+    </div>
+  </div>
+</section>

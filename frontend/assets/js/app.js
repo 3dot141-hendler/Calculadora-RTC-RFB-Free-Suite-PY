@@ -12,6 +12,20 @@
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   }
 
+  function toApiNum(raw, fallback = "0.00") {
+    if (window.BrNumber) {
+      return window.BrNumber.parseToApiDecimal(raw, fallback);
+    }
+    const cleaned = String(raw ?? "").trim().replace(",", ".");
+    return cleaned === "" ? fallback : cleaned;
+  }
+
+  function toOptionalApiNum(raw) {
+    const trimmed = String(raw ?? "").trim();
+    if (!trimmed) return null;
+    return toApiNum(trimmed, null);
+  }
+
   async function checkApiHealth() {
     const badge = document.getElementById("apiStatusBadge");
     if (!badge) return;
@@ -36,8 +50,8 @@
       e.preventDefault();
       const resultEl = document.getElementById("simplesResult");
       const payload = {
-        receita_bruta_12m: form.receita_bruta_12m.value,
-        valor_operacao: form.valor_operacao.value,
+        receita_bruta_12m: toApiNum(form.receita_bruta_12m.value),
+        valor_operacao: toApiNum(form.valor_operacao.value),
         anexo: form.anexo.value,
         recolher_ibs_cbs_por_fora: form.recolher_ibs_cbs_por_fora.checked,
       };
@@ -74,14 +88,14 @@
       e.preventDefault();
       const resultEl = document.getElementById("simplesItemResult");
       const tpEnteGov = itemForm.tp_ente_gov.value ? Number(itemForm.tp_ente_gov.value) : null;
-      const fator = itemForm.fator_transicao_compra_gov.value || null;
+      const fator = toOptionalApiNum(itemForm.fator_transicao_compra_gov.value);
       const payload = {
         regime: itemForm.regime.value,
         tp_rbsn: Number(itemForm.tp_rbsn.value),
         c_ativ_sn_valido: itemForm.c_ativ_sn_valido.checked,
-        base_calculo: itemForm.base_calculo.value,
-        p_ibs_sn: itemForm.p_ibs_sn.value || null,
-        p_cbs_sn: itemForm.p_cbs_sn.value || null,
+        base_calculo: toApiNum(itemForm.base_calculo.value),
+        p_ibs_sn: toOptionalApiNum(itemForm.p_ibs_sn.value),
+        p_cbs_sn: toOptionalApiNum(itemForm.p_cbs_sn.value),
         tp_ente_gov: tpEnteGov,
         fator_transicao_compra_gov: fator,
       };
@@ -114,41 +128,6 @@
         </div>
       `;
     });
-
-    const bcForm = document.getElementById("baseCalculoCibsForm");
-    if (!bcForm) return;
-
-    bcForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const resultEl = document.getElementById("baseCalculoCibsResult");
-      const payload = {
-        ano_fato_gerador: Number(bcForm.ano_fato_gerador.value),
-        valor_bem: bcForm.valor_bem.value,
-        frete: bcForm.frete.value || "0.00",
-        imposto_seletivo: bcForm.imposto_seletivo.value || "0.00",
-        icms: bcForm.icms.value || "0.00",
-        pis: bcForm.pis.value || "0.00",
-        desconto_incondicional: bcForm.desconto_incondicional.value || "0.00",
-      };
-
-      const res = await fetch(`${API_BASE}/regime-regular/base-calculo/cbs-ibs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        resultEl.innerHTML = `<div class="alert alert-danger mb-0">${JSON.stringify(data.detail)}</div>`;
-        return;
-      }
-
-      resultEl.innerHTML = `
-        <div class="result-box p-3">
-          <strong>Base de Cálculo CBS/IBS Apurada:</strong>
-          <span class="fs-5 fw-bold text-primary ms-2">${formatBRL(data.base_calculo)}</span>
-        </div>
-      `;
-    });
   }
 
   function bindRegimeRegularForm() {
@@ -159,13 +138,13 @@
       e.preventDefault();
       const resultEl = document.getElementById("regimeRegularResult");
       const payload = {
-        valor_operacao: form.valor_operacao.value,
-        aliquota_ibs_uf: form.aliquota_ibs_uf.value,
-        aliquota_ibs_mun: form.aliquota_ibs_mun.value,
-        aliquota_cbs: form.aliquota_cbs.value,
-        aliquota_is: form.aliquota_is.value,
-        percentual_reducao: form.percentual_reducao.value,
-        creditos_anteriores: form.creditos_anteriores.value,
+        valor_operacao: toApiNum(form.valor_operacao.value),
+        aliquota_ibs_uf: toApiNum(form.aliquota_ibs_uf.value),
+        aliquota_ibs_mun: toApiNum(form.aliquota_ibs_mun.value),
+        aliquota_cbs: toApiNum(form.aliquota_cbs.value),
+        aliquota_is: toApiNum(form.aliquota_is.value),
+        percentual_reducao: toApiNum(form.percentual_reducao.value),
+        creditos_anteriores: toApiNum(form.creditos_anteriores.value),
       };
 
       const res = await fetch(`${API_BASE}/regime-regular/calcular`, {
@@ -202,12 +181,12 @@
       const resultEl = document.getElementById("baseCalculoCibsResult");
       const payload = {
         ano_fato_gerador: Number(bcForm.ano_fato_gerador.value),
-        valor_bem: bcForm.valor_bem.value,
-        frete: bcForm.frete.value || "0.00",
-        imposto_seletivo: bcForm.imposto_seletivo.value || "0.00",
-        icms: bcForm.icms.value || "0.00",
-        pis: bcForm.pis.value || "0.00",
-        desconto_incondicional: bcForm.desconto_incondicional.value || "0.00",
+        valor_bem: toApiNum(bcForm.valor_bem.value),
+        frete: toApiNum(bcForm.frete.value),
+        imposto_seletivo: toApiNum(bcForm.imposto_seletivo.value),
+        icms: toApiNum(bcForm.icms.value),
+        pis: toApiNum(bcForm.pis.value),
+        desconto_incondicional: toApiNum(bcForm.desconto_incondicional.value),
       };
 
       const res = await fetch(`${API_BASE}/regime-regular/base-calculo/cbs-ibs`, {
@@ -242,9 +221,9 @@
         prestador_cnpj: form.prestador_cnpj.value.replace(/\D/g, ""),
         tomador_documento: form.tomador_documento.value.replace(/\D/g, ""),
         discriminacao_servico: form.discriminacao_servico.value,
-        valor_servicos: form.valor_servicos.value,
-        valor_ibs: form.valor_ibs.value,
-        valor_cbs: form.valor_cbs.value,
+        valor_servicos: toApiNum(form.valor_servicos.value),
+        valor_ibs: toApiNum(form.valor_ibs.value),
+        valor_cbs: toApiNum(form.valor_cbs.value),
         situacao_stc: Number(form.situacao_stc.value),
       };
 
@@ -288,6 +267,8 @@
 
   document.addEventListener("partial:loaded", (event) => {
     const { route } = event.detail;
+    const container = document.getElementById("partial-container");
+    if (container) window.BrNumber?.attachMoneyInputs(container);
     if (route === "dashboard") bindDashboardCards();
     if (route === "simples") bindSimplesForm();
     if (route === "regime-regular") bindRegimeRegularForm();
@@ -300,4 +281,3 @@
     checkApiHealth();
   });
 })(window, document);
-

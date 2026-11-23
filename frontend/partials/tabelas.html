@@ -7,13 +7,13 @@
             <i class="bi bi-database-check text-info me-2"></i>Tabelas Oficiais Vigentes (SQLite Read-Only)
           </h2>
           <p class="text-muted small mb-0">
-            Consulte classificações CST/cClassTrib, atividades do Simples Nacional e alíquotas de referência por data de vigência.
+            Base oficial consolidada da RFB: 27 UFs, 164 CST/cClassTrib, 15 cAtivSN, 334 NCM (IS), 118 NBS, 43 Tratamentos ADR001 e 5.525 municípios IBGE.
           </p>
         </div>
         <form id="tabelasFilterForm" class="d-flex align-items-end gap-2">
           <div>
             <label for="tabelasDataVigencia" class="form-label small mb-1">Data Fato Gerador</label>
-            <input type="date" id="tabelasDataVigencia" class="form-control form-control-sm" value="2026-01-01" required />
+            <input type="date" id="tabelasDataVigencia" data-default-today class="form-control form-control-sm" required />
           </div>
           <button type="submit" class="btn btn-sm btn-primary">
             <i class="bi bi-search me-1"></i>Consultar
@@ -29,19 +29,29 @@
     </div>
   </div>
 
-  <div class="col-lg-6">
+  <div class="col-lg-7">
     <div class="card shadow-sm border-0 h-100">
-      <div class="card-header bg-white fw-bold small">
-        <i class="bi bi-tags me-1 text-primary"></i>CST &amp; cClassTrib
+      <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span class="fw-bold small">
+          <i class="bi bi-tags me-1 text-primary"></i>CST &amp; cClassTrib (LC 214/2025)
+          <span id="tabelasCstCount" class="badge text-bg-light border text-dark ms-1">0</span>
+        </span>
+        <form id="cstSearchForm" class="d-flex align-items-center gap-1">
+          <input type="text" id="cstCodeFilter" class="form-control form-control-sm" placeholder="CST (ex: 200)" maxlength="3" style="width: 105px;" />
+          <input type="text" id="cstQueryFilter" class="form-control form-control-sm" placeholder="Código ou descrição..." style="width: 185px;" />
+          <button type="submit" class="btn btn-sm btn-outline-primary" title="Filtrar CST/cClassTrib">
+            <i class="bi bi-search"></i>
+          </button>
+        </form>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive" style="max-height: 360px;">
         <table class="table table-sm table-hover mb-0 align-middle">
-          <thead class="table-light">
+          <thead class="table-light sticky-top">
             <tr>
               <th>CST</th>
               <th>cClassTrib</th>
               <th>Descrição</th>
-              <th class="text-end">Red. IBS/CBS</th>
+              <th class="text-end text-nowrap">Red. IBS/CBS</th>
             </tr>
           </thead>
           <tbody id="tabelasCstBody"></tbody>
@@ -50,18 +60,21 @@
     </div>
   </div>
 
-  <div class="col-lg-6">
+  <div class="col-lg-5">
     <div class="card shadow-sm border-0 h-100">
-      <div class="card-header bg-white fw-bold small">
-        <i class="bi bi-shop me-1 text-success"></i>Atividades Simples Nacional (cAtivSN)
+      <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <span class="fw-bold small">
+          <i class="bi bi-shop me-1 text-success"></i>Atividades Simples Nacional (cAtivSN)
+        </span>
+        <span id="tabelasAtivCount" class="badge text-bg-light border text-dark">0</span>
       </div>
-      <div class="table-responsive">
+      <div class="table-responsive" style="max-height: 360px;">
         <table class="table table-sm table-hover mb-0 align-middle">
-          <thead class="table-light">
+          <thead class="table-light sticky-top">
             <tr>
-              <th>Código</th>
-              <th>Descrição</th>
-              <th>Anexo Base</th>
+              <th>Cód.</th>
+              <th>Descrição (NT 2026.005)</th>
+              <th>Anexo</th>
               <th>Fator R</th>
             </tr>
           </thead>
@@ -74,6 +87,106 @@
   <div class="col-12">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active small fw-semibold" data-bs-toggle="tab" data-bs-target="#tabNcmIs" type="button" role="tab">
+              NCM — Imposto Seletivo <span id="tabelasNcmCount" class="badge text-bg-light border text-dark ms-1">0</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link small fw-semibold" data-bs-toggle="tab" data-bs-target="#tabNbs" type="button" role="tab">
+              NBS Aplicável <span id="tabelasNbsCount" class="badge text-bg-light border text-dark ms-1">0</span>
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link small fw-semibold" data-bs-toggle="tab" data-bs-target="#tabTratamentos" type="button" role="tab">
+              Matriz Tratamento Tributário (ADR001) <span id="tabelasTratCount" class="badge text-bg-light border text-dark ms-1">0</span>
+            </button>
+          </li>
+        </ul>
+        <form id="avancadoSearchForm" class="d-flex align-items-center gap-1">
+          <input type="text" id="avancadoQueryFilter" class="form-control form-control-sm" placeholder="Buscar NCM, NBS ou fórmula..." style="width: 220px;" />
+          <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+        </form>
+      </div>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tabNcmIs" role="tabpanel">
+          <div class="table-responsive" style="max-height: 260px;">
+            <table class="table table-sm table-hover mb-0 align-middle">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th>NCM</th>
+                  <th>Descrição</th>
+                  <th class="text-end">Ad Valorem (%)</th>
+                  <th class="text-end">Ad Rem (R$)</th>
+                  <th>Vigência</th>
+                </tr>
+              </thead>
+              <tbody id="tabelasNcmBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tabNbs" role="tabpanel">
+          <div class="table-responsive" style="max-height: 260px;">
+            <table class="table table-sm table-hover mb-0 align-middle">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th>NBS</th>
+                  <th>Descrição</th>
+                  <th>LC 116</th>
+                  <th>cClassTrib</th>
+                </tr>
+              </thead>
+              <tbody id="tabelasNbsBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tabTratamentos" role="tabpanel">
+          <div class="table-responsive" style="max-height: 260px;">
+            <table class="table table-sm table-hover mb-0 align-middle">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th>ID</th>
+                  <th>Descrição</th>
+                  <th>Expressão Tributo Calculado</th>
+                  <th>Redução / Monofasia</th>
+                </tr>
+              </thead>
+              <tbody id="tabelasTratBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <span class="fw-bold small">
+          <i class="bi bi-map me-1 text-primary"></i>Alíquotas de Referência por UF
+        </span>
+        <span id="tabelasUfsCount" class="badge text-bg-light border text-dark">0</span>
+      </div>
+      <div class="table-responsive" style="max-height: 280px;">
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th>UF</th>
+              <th>Estado</th>
+              <th class="text-end">IBS UF</th>
+              <th class="text-end">CBS</th>
+            </tr>
+          </thead>
+          <tbody id="tabelasUfsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-2">
         <span class="fw-bold small">
           <i class="bi bi-geo-alt me-1 text-info"></i>Catálogo de Municípios IBGE (5.525 localidades)
         </span>
@@ -85,14 +198,14 @@
           </button>
         </form>
       </div>
-      <div class="table-responsive" style="max-height: 260px;">
+      <div class="table-responsive" style="max-height: 280px;">
         <table class="table table-sm table-hover mb-0 align-middle">
-          <thead class="table-light">
+          <thead class="table-light sticky-top">
             <tr>
               <th>Código IBGE</th>
               <th>Município</th>
               <th>UF</th>
-              <th>Código UF</th>
+              <th>Cód. UF</th>
             </tr>
           </thead>
           <tbody id="tabelasLocalidadesBody"></tbody>
@@ -101,4 +214,3 @@
     </div>
   </div>
 </section>
-
