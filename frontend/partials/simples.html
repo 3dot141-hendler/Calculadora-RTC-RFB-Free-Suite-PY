@@ -1,5 +1,5 @@
 <section class="row justify-content-center" aria-label="Calculadora Simples Nacional RTC">
-  <div class="col-lg-8">
+  <div class="col-lg-10">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h2 class="h6 mb-0 fw-bold">
@@ -136,6 +136,107 @@
         </form>
 
         <div id="simplesItemResult" class="mt-4"></div>
+      </div>
+    </div>
+
+    <!-- Card 3: Operação Multi-Itens & Observabilidade VSN-* -->
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h2 class="h6 mb-0 fw-bold">
+            <i class="bi bi-list-check text-success me-2"></i>Operação em Lote Multi-Itens &amp; Observabilidade VSN-*
+          </h2>
+          <small class="text-muted">Validação cruzada CRT × tpRegimeIBSCBS × tpDoc, isolamento de erros por item e totalização oficial (NT 2026.005).</small>
+        </div>
+        <div class="d-flex flex-wrap gap-1 align-items-center">
+          <button type="button" id="simplesOperCatalogBtn" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-journal-code me-1"></i>Catálogo VSN-*
+          </button>
+          <span class="badge text-bg-success">POST /api/v1/simples/observabilidade/calcular</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="simplesOperForm" class="row g-3" novalidate>
+          <div class="col-md-2">
+            <label for="operData" class="form-label small fw-semibold">Data Fato Gerador</label>
+            <input id="operData" name="data" type="date" data-default-today class="form-control form-control-sm" required />
+          </div>
+          <div class="col-md-2">
+            <label for="operTpDoc" class="form-label small fw-semibold">Documento (tpDoc)</label>
+            <select id="operTpDoc" name="tpDoc" class="form-select form-select-sm">
+              <option value="55" selected>55 — NF-e</option>
+              <option value="65">65 — NFC-e</option>
+              <option value="77">77 — Sem tratamento (VSN-015)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="operCRT" class="form-label small fw-semibold">CRT (Regime Tributário)</label>
+            <select id="operCRT" name="CRT" class="form-select form-select-sm">
+              <option value="1" selected>1 — Simples Nacional</option>
+              <option value="2">2 — Excesso Sublimite (sem IBS)</option>
+              <option value="3">3 — Regime Normal (c/ tpRegime=2)</option>
+              <option value="4">4 — MEI (Fora escopo VSN-019)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="operTpRegime" class="form-label small fw-semibold">tpRegimeIBSCBS</label>
+            <select id="operTpRegime" name="tpRegimeIBSCBS" class="form-select form-select-sm">
+              <option value="" selected>(Omitido)</option>
+              <option value="1">1 — Regime Regular (VSN-019)</option>
+              <option value="2">2 — Recolhimento no SN (c/ CRT=3)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="operTpEnteGov" class="form-label small fw-semibold">Compra Gov</label>
+            <select id="operTpEnteGov" name="tpEnteGov" class="form-select form-select-sm">
+              <option value="" selected>Nenhuma</option>
+              <option value="1">1 — União</option>
+              <option value="2">2 — Estado</option>
+              <option value="3">3 — DF</option>
+              <option value="4">4 — Município</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+              <span class="small fw-semibold text-muted">Itens da Operação (JSON Pointer <code>#/itens/{i}</code>)</span>
+              <div class="d-flex gap-1">
+                <button type="button" id="simplesOperDemoErroBtn" class="btn btn-sm btn-outline-warning text-dark">
+                  <i class="bi bi-bug me-1"></i>Lote Misto (Válido + VSN-023 + Não Calc.)
+                </button>
+                <button type="button" id="simplesOperAddItemBtn" class="btn btn-sm btn-outline-success">
+                  <i class="bi bi-plus-lg me-1"></i>Adicionar Item
+                </button>
+              </div>
+            </div>
+            <div class="table-responsive border rounded">
+              <table class="table table-sm align-middle mb-0 small">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 60px;">#</th>
+                    <th style="width: 110px;">cAtivSN</th>
+                    <th style="width: 120px;">cClassTrib</th>
+                    <th>Base (R$)</th>
+                    <th>IS (R$)</th>
+                    <th>pIBSSN (%)</th>
+                    <th>pCBSSN (%)</th>
+                    <th style="width: 44px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="simplesOperItensBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="col-12 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-success btn-sm px-4">
+              <i class="bi bi-play-circle me-1"></i>Processar Lote &amp; Observabilidade
+            </button>
+          </div>
+        </form>
+
+        <div id="simplesOperResult" class="mt-4"></div>
+        <div id="simplesOperCatalogArea" class="mt-3 d-none"></div>
       </div>
     </div>
   </div>

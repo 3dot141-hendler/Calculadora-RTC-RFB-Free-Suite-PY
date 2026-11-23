@@ -107,11 +107,15 @@
     if (Number(data.aliquota_ibs_mun_aplicada) > 0) extras.push(`Mun ${formatPct(data.aliquota_ibs_mun_aplicada)}`);
     if (Number(payload.aliquota_is) > 0) extras.push(`IS ${formatPct(payload.aliquota_is)}`);
     const aliqResumo = `IBS ${formatPct(data.aliquota_ibs_uf_aplicada)} • CBS ${formatPct(data.aliquota_cbs_aplicada)}${extras.length ? ` • ${extras.join(" • ")}` : ""}`;
+    const fr = data.fator_r;
+    const anexoTexto = fr && fr.aplicado
+      ? `${ANEXO_LABELS[data.anexo] || `Anexo ${data.anexo}`} • Fator R ${formatPct(fr.percentual_fator_r)} (Folha ${formatBRL(fr.folha_salarios_12m)})`
+      : ANEXO_LABELS[data.anexo] || `Anexo ${data.anexo}`;
 
     const paramsHtml = buildParamsGridHtml([
       ["RBT12 (12 meses)", formatBRL(data.receita_bruta_12m)],
       ["Valor da Operação", formatBRL(data.valor_operacao)],
-      ["Anexo LC 123", ANEXO_LABELS[data.anexo] || `Anexo ${data.anexo}`],
+      ["Anexo LC 123", anexoTexto],
       ["Fato Gerador / UF", `${formatDateBR(payload.data_fato_gerador)} • ${data.uf || "-"}`],
       ["cClassTrib / Redução", `${data.c_class_trib || "-"} (Red. ${formatPct(data.reducao_ibs_percentual)})`],
       ["Alíquotas Aplicadas", aliqResumo],
@@ -198,7 +202,7 @@
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
-      ${buildFooterHtml("Cálculos baseados nas faixas progressivas da LC 123/2006 e regras de transição IBS/CBS da LC 214/2025.")}
+      ${buildFooterHtml("Cálculos baseados nas faixas progressivas da LC 123/2006 (incluindo Fator R quando ativo) e regras de transição IBS/CBS da LC 214/2025.")}
     `;
   }
 

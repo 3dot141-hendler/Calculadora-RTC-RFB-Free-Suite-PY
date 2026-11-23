@@ -9,6 +9,7 @@
       receita_bruta_12m: "720000.00",
       valor_operacao: "50000.00",
       anexo: "I",
+      aplicar_fator_r: false,
       uf: "RS",
       c_class_trib: "000001",
       creditos_anteriores: "4500.00",
@@ -19,7 +20,9 @@
     "servicos-ti": {
       receita_bruta_12m: "1200000.00",
       valor_operacao: "30000.00",
-      anexo: "III",
+      anexo: "V",
+      aplicar_fator_r: true,
+      folha_salarios_12m: "360000.00",
       uf: "RS",
       c_class_trib: "000001",
       creditos_anteriores: "600.00",
@@ -31,6 +34,8 @@
       receita_bruta_12m: "1800000.00",
       valor_operacao: "40000.00",
       anexo: "V",
+      aplicar_fator_r: true,
+      folha_salarios_12m: "396000.00",
       uf: "RS",
       c_class_trib: "200028",
       creditos_anteriores: "1200.00",
@@ -59,9 +64,7 @@
   function readNumberField(form, name, fallback = "0.00") {
     const el = form.elements.namedItem(name);
     if (!el) return fallback;
-    if (window.BrNumber) {
-      return window.BrNumber.parseToApiDecimal(el.value, fallback);
-    }
+    if (window.BrNumber) return window.BrNumber.parseToApiDecimal(el.value, fallback);
     const raw = String(el.value ?? "").trim().replace(",", ".");
     return raw === "" ? fallback : raw;
   }
@@ -78,16 +81,17 @@
     Object.entries(preset).forEach(([field, val]) => {
       const el = form.elements.namedItem(field);
       if (!el) return;
-      if (el.hasAttribute("data-br-money") && window.BrNumber) {
+      if (el.type === "checkbox") {
+        el.checked = Boolean(val);
+      } else if (el.hasAttribute("data-br-money") && window.BrNumber) {
         el.value = window.BrNumber.formatBrDecimal(val, 2);
       } else {
         el.value = val;
       }
     });
     const dateEl = form.elements.namedItem("data_fato_gerador");
-    if (dateEl && !dateEl.value) {
-      dateEl.value = getTodayIso();
-    }
+    if (dateEl && !dateEl.value) dateEl.value = getTodayIso();
+    window.ComparadorFatorR?.syncUiState(form);
   }
 
   function formatValidationError(detail) {
@@ -114,6 +118,7 @@
       ...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0),
       1
     );
+    const fatorRHtml = window.ComparadorFatorR?.renderBannerHtml(data.fator_r) || "";
 
     const cardsHtml = data.cenarios
       .map((cenario) => {
@@ -121,7 +126,6 @@
         const isMelhorB2b =
           cenario.id === data.melhor_cenario_competitividade_b2b &&
           Number(data.percentual_vendas_b2b) > 0;
-
         const borderClass = isMelhorCarga ? "border-success border-2" : "border";
         const barWidth = Math.min(
           Math.round((Number(cenario.aliquota_efetiva_percentual) / maxAliq) * 100),
@@ -133,7 +137,6 @@
             : cenario.id === "simples_hibrido"
               ? "bg-info"
               : "bg-primary";
-
         const badges = [
           isMelhorCarga
             ? '<span class="badge text-bg-success"><i class="bi bi-trophy me-1"></i>Menor Carga Própria</span>'
@@ -152,7 +155,6 @@
                 <div class="d-flex flex-wrap gap-1 mb-2">${badges || '<span class="badge text-bg-light border text-dark">Cenário Simulado</span>'}</div>
                 <h3 class="h6 fw-bold mb-1">${cenario.nome}</h3>
                 <p class="text-muted small mb-3">${cenario.subtitulo}</p>
-
                 <div class="p-3 rounded bg-light mb-3">
                   <div class="small text-muted">Carga Tributária Própria</div>
                   <div class="fs-4 fw-bold text-dark">${formatBRL(cenario.carga_tributaria_total)}</div>
@@ -164,7 +166,6 @@
                     <div class="progress-bar ${barColor}" style="width: ${barWidth}%;"></div>
                   </div>
                 </div>
-
                 <ul class="list-group list-group-flush small mb-3 flex-grow-1">
                   <li class="list-group-item px-0 d-flex justify-content-between">
                     <span class="text-muted">DAS (LC 123)</span>
@@ -187,7 +188,6 @@
                     <strong>${formatBRL(cenario.custo_efetivo_cliente_b2b)}</strong>
                   </li>
                 </ul>
-
                 <p class="text-muted mb-0" style="font-size: 0.78rem;">
                   <i class="bi bi-info-circle me-1"></i>${cenario.observacoes}
                 </p>
@@ -232,9 +232,8 @@
         </div>
         <p class="mb-0 small">${data.resumo_executivo}</p>
       </div>
-
+      ${fatorRHtml}
       <div class="row g-3 mb-4">${cardsHtml}</div>
-
       <div class="card shadow-sm border-0">
         <div class="card-header bg-white py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
           <h3 class="h6 mb-0 fw-bold"><i class="bi bi-table me-2 text-primary"></i>Quadro Comparativo Sintético</h3>
@@ -292,6 +291,7 @@
       return;
     }
 
+    const fatorRFields = window.ComparadorFatorR?.readPayloadFields(form) || { aplicar_fator_r: false };
     const payload = {
       receita_bruta_12m: readNumberField(form, "receita_bruta_12m", "0.00"),
       valor_operacao: readNumberField(form, "valor_operacao", "0.00"),
@@ -303,15 +303,14 @@
       aliquota_is: readNumberField(form, "aliquota_is", "0.00"),
       creditos_anteriores: readNumberField(form, "creditos_anteriores", "0.00"),
       percentual_vendas_b2b: readNumberField(form, "percentual_vendas_b2b", "0.00"),
+      ...fatorRFields,
     };
 
     if (submitBtn) {
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Calculando...';
     }
-    if (statusText) {
-      statusText.textContent = "Recalculando cenários na API...";
-    }
+    if (statusText) statusText.textContent = "Recalculando cenários na API...";
 
     try {
       const res = await fetch("/api/v1/comparador/simular", {
@@ -334,9 +333,7 @@
       if (statusText) {
         statusText.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Simulação atualizada às ${new Date().toLocaleTimeString("pt-BR")}`;
       }
-      if (scrollToResult) {
-        container.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
+      if (scrollToResult) container.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } catch (err) {
       window.ComparadorReport?.setLastResult("simples_regular", null, null);
       setPrintButtonState(false);
@@ -360,6 +357,7 @@
 
     window.BrNumber?.applyDefaultTodayDates(form);
     window.BrNumber?.attachMoneyInputs(form);
+    window.ComparadorFatorR?.bindControls(form);
 
     if (printBtn) {
       printBtn.addEventListener("click", () => {
@@ -379,7 +377,6 @@
       runComparison(form, container, true);
     });
 
-    // Executa uma simulação inicial para demonstrar o comparador imediatamente
     runComparison(form, container, false);
   });
 })(window, document);
