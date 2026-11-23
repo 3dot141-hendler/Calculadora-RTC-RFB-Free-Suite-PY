@@ -1,5 +1,5 @@
 <section class="row justify-content-center" aria-label="Calculadora Regime Regular RTC">
-  <div class="col-lg-9">
+  <div class="col-lg-10">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h2 class="h6 mb-0 fw-bold">
@@ -43,73 +43,24 @@
             </button>
           </div>
         </form>
-
         <div id="regimeRegularResult" class="mt-4"></div>
       </div>
     </div>
 
     <div class="card shadow-sm border-0 mt-4">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h2 class="h6 mb-0 fw-bold">
-          <i class="bi bi-sliders text-primary me-2"></i>Apuração de Base de Cálculo CBS/IBS (RFB)
-        </h2>
-        <span class="badge text-bg-primary">POST /api/v1/regime-regular/base-calculo/cbs-ibs</span>
-      </div>
-      <div class="card-body">
-        <form id="baseCalculoCibsForm" class="row g-3" novalidate>
-          <div class="col-md-3">
-            <label for="ano_fato_gerador" class="form-label">Ano Fato Gerador</label>
-            <input type="number" min="2000" max="2100" data-default-year class="form-control" id="ano_fato_gerador" name="ano_fato_gerador" required />
-          </div>
-          <div class="col-md-3">
-            <label for="valor_bem" class="form-label">Valor do Bem (R$)</label>
-            <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_bem" name="valor_bem" value="1.000,00" required />
-          </div>
-          <div class="col-md-3">
-            <label for="frete" class="form-label">Frete (+) (R$)</label>
-            <input type="text" inputmode="decimal" data-br-money class="form-control" id="frete" name="frete" value="100,00" />
-          </div>
-          <div class="col-md-3">
-            <label for="imposto_seletivo" class="form-label">IS (+) (R$)</label>
-            <input type="text" inputmode="decimal" data-br-money class="form-control" id="imposto_seletivo" name="imposto_seletivo" value="50,00" />
-          </div>
-          <div class="col-md-4">
-            <label for="icms" class="form-label">ICMS (-) (R$)</label>
-            <input type="text" inputmode="decimal" data-br-money class="form-control" id="icms" name="icms" value="180,00" />
-          </div>
-          <div class="col-md-4">
-            <label for="pis" class="form-label">PIS (-) (R$)</label>
-            <input type="text" inputmode="decimal" data-br-money class="form-control" id="pis" name="pis" value="16,50" />
-          </div>
-          <div class="col-md-4">
-            <label for="desconto_incondicional" class="form-label">Desconto Incond. (-) (R$)</label>
-            <input type="text" inputmode="decimal" data-br-money class="form-control" id="desconto_incondicional" name="desconto_incondicional" value="20,00" />
-          </div>
-          <div class="col-12">
-            <button type="submit" class="btn btn-outline-primary">
-              <i class="bi bi-check2-circle me-1"></i>Apurar Base de Cálculo
-            </button>
-          </div>
-        </form>
-
-        <div id="baseCalculoCibsResult" class="mt-4"></div>
-      </div>
-    </div>
-
-    <div class="card shadow-sm border-0 mt-4">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h2 class="h6 mb-0 fw-bold">
-          <i class="bi bi-list-check text-primary me-2"></i>Simulador de Operação Multi-Itens (Redução &amp; Diferimento)
+          <i class="bi bi-list-check text-primary me-2"></i>Operação Multi-Itens (Redução Base, Crédito Presumido, Compra Gov &amp; Diferimento)
         </h2>
         <span class="badge text-bg-primary">POST /api/v1/regime-regular/calcular-operacao</span>
       </div>
       <div class="card-body">
         <form id="operacaoRegimeRegularForm" class="row g-3" novalidate>
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label for="op_data" class="form-label">Data Fato Gerador</label>
             <input type="date" data-default-today class="form-control form-control-sm" id="op_data" name="op_data" required />
           </div>
-          <div class="col-md-4">
+          <div class="col-md-2">
             <label for="op_uf" class="form-label">UF Destino</label>
             <select class="form-select form-select-sm" id="op_uf" name="op_uf">
               <option value="AC">AC</option><option value="AL">AL</option><option value="AM">AM</option>
@@ -123,9 +74,23 @@
               <option value="SE">SE</option><option value="SP">SP</option><option value="TO">TO</option>
             </select>
           </div>
-          <div class="col-md-4 d-flex align-items-end justify-content-end">
-            <button type="button" id="opAddItemBtn" class="btn btn-sm btn-outline-secondary">
-              <i class="bi bi-plus-lg me-1"></i>Adicionar Item
+          <div class="col-md-3">
+            <label for="op_tp_ente_gov" class="form-label">Compra Governamental</label>
+            <select class="form-select form-select-sm" id="op_tp_ente_gov" name="op_tp_ente_gov">
+              <option value="">Não aplicável</option>
+              <option value="1">1 - União</option>
+              <option value="2">2 - Estado</option>
+              <option value="3">3 - Distrito Federal</option>
+              <option value="4">4 - Município</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="op_redutor_gov" class="form-label">Redutor Gov (%)</label>
+            <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" id="op_redutor_gov" name="op_redutor_gov" placeholder="Auto SQLite" />
+          </div>
+          <div class="col-md-2 d-flex align-items-end justify-content-end">
+            <button type="button" id="opAddItemBtn" class="btn btn-sm btn-outline-secondary w-100">
+              <i class="bi bi-plus-lg me-1"></i>Item
             </button>
           </div>
           <div class="col-12">
@@ -136,7 +101,9 @@
                     <th>Código</th>
                     <th>Base (R$)</th>
                     <th>cClassTrib</th>
+                    <th>Red. Base (%)</th>
                     <th>Diferimento (%)</th>
+                    <th>Créd. Pres. IBS (%)</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -150,8 +117,232 @@
             </button>
           </div>
         </form>
-
         <div id="operacaoRegimeRegularResult" class="mt-4"></div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2 class="h6 mb-0 fw-bold">
+          <i class="bi bi-layers text-primary me-2"></i>Bases de Cálculo Unificadas RFB (NF-e/NFC-e &amp; NFS-e / Locação 99.03)
+        </h2>
+        <span class="badge text-bg-info text-dark">RG + IS + SN</span>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-tabs mb-3" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabUnifNfe" type="button" role="tab">
+              NF-e / NFC-e (55 / 65)
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabUnifNfse" type="button" role="tab">
+              NFS-e / Salão Parceiro / Locação 99.03
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLegacyCibs" type="button" role="tab">
+              Legado CBS/IBS
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="tabUnifNfe" role="tabpanel">
+            <form id="baseUnificadaNfeForm" class="row g-2" novalidate>
+              <div class="col-md-2">
+                <label class="form-label small">Ano (2026–2033)</label>
+                <input type="number" min="2026" max="2033" value="2026" class="form-control form-control-sm" name="unif_ano" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">Modelo DF-e</label>
+                <select class="form-select form-select-sm" name="unif_tp_doc">
+                  <option value="55">55 (NF-e)</option>
+                  <option value="65">65 (NFC-e)</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">Natureza</label>
+                <select class="form-select form-select-sm" name="unif_natureza">
+                  <option value="bem">Bem</option>
+                  <option value="servico">Serviço</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">vProd (+) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vprod" value="1.000,00" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">vFrete (+) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vfrete" value="100,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vII (+) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vii" value="0,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vIS (+) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vis" value="0,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vDesc (-) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vdesc" value="20,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vPIS (-) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vpis" value="16,50" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vCOFINS (-) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vcofins" value="76,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vICMS (-) R$</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="unif_vicms" value="180,00" />
+              </div>
+              <input type="hidden" name="unif_vissqn" value="0,00" />
+              <div class="col-12 mt-2">
+                <button type="submit" class="btn btn-sm btn-primary">Apurar Bases Unificadas (RG / IS / SN)</button>
+              </div>
+            </form>
+            <div id="baseUnificadaNfeResult" class="mt-3"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tabUnifNfse" role="tabpanel">
+            <form id="baseUnificadaNfseForm" class="row g-2" novalidate>
+              <div class="col-md-2">
+                <label class="form-label small">Ano</label>
+                <input type="number" min="2026" max="2035" value="2026" class="form-control form-control-sm" name="nfse_ano" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">Opção Simples (opSimpNac)</label>
+                <select class="form-select form-select-sm" name="nfse_op_sn">
+                  <option value="1">1 - Não Optante</option>
+                  <option value="2">2 - MEI</option>
+                  <option value="3">3 - Optante ME/EPP</option>
+                  <option value="4">4 - Optante Pendente</option>
+                </select>
+              </div>
+              <div class="col-md-3 d-none" id="nfseRegApWrap">
+                <label class="form-label small">Regime Apuração SN</label>
+                <select class="form-select form-select-sm" name="nfse_reg_ap">
+                  <option value="1">1 - IBS+CBS pelo SN</option>
+                  <option value="2">2 - CBS SN + IBS Regular</option>
+                  <option value="3">3 - Ambos Regulares</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">Situação</label>
+                <select class="form-select form-select-sm" name="nfse_situacao">
+                  <option value="comum">Serviço Comum</option>
+                  <option value="salaoParceiro">Salão Parceiro</option>
+                  <option value="locacao9903">Locação de Imóveis (99.03)</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">vServ (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vserv" value="1.000,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vDescIncond</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vdesc" value="0,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vISSQN</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vissqn" value="50,00" />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">vPIS</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vpis" value="6,50" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">vCOFINS</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vcofins" value="30,00" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">Ajuste (tpAjusteBC)</label>
+                <select class="form-select form-select-sm" name="nfse_tp_ajuste">
+                  <option value="101">101 - Subcontratação</option>
+                  <option value="102">102 - Consórcio</option>
+                  <option value="103">103 - Intermediação</option>
+                  <option value="199">199 - Outros (exige descrição)</option>
+                  <option value="9">9 - Profissional Parceiro</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">Valor Ajuste (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vajuste" value="0,00" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">Descrição (xTpAjusteBC p/ 199)</label>
+                <input type="text" class="form-control form-control-sm" name="nfse_xtp_ajuste" placeholder="Obrigatório para tipo 199" />
+              </div>
+              <div id="nfseLocacaoFields" class="col-12 d-none">
+                <div class="row g-2 p-2 bg-light rounded border mt-1">
+                  <div class="col-md-3">
+                    <label class="form-label small">pCopropriedade (%)</label>
+                    <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_pcoprop" value="50,00" />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small">vTotOper (R$)</label>
+                    <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vtot_oper" value="2.000,00" />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small">vDescIncondTot</label>
+                    <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vdesc_loc" value="0,00" />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small">Ajustes Locação</label>
+                    <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vajuste_loc" value="0,00" />
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 mt-2">
+                <button type="submit" class="btn btn-sm btn-primary">Apurar Base Unificada NFS-e</button>
+              </div>
+            </form>
+            <div id="baseUnificadaNfseResult" class="mt-3"></div>
+          </div>
+
+          <div class="tab-pane fade" id="tabLegacyCibs" role="tabpanel">
+            <form id="baseCalculoCibsForm" class="row g-3" novalidate>
+              <div class="col-md-3">
+                <label for="ano_fato_gerador" class="form-label">Ano Fato Gerador</label>
+                <input type="number" min="2000" max="2100" data-default-year class="form-control" id="ano_fato_gerador" name="ano_fato_gerador" required />
+              </div>
+              <div class="col-md-3">
+                <label for="valor_bem" class="form-label">Valor do Bem (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control" id="valor_bem" name="valor_bem" value="1.000,00" required />
+              </div>
+              <div class="col-md-3">
+                <label for="frete" class="form-label">Frete (+) (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control" id="frete" name="frete" value="100,00" />
+              </div>
+              <div class="col-md-3">
+                <label for="imposto_seletivo" class="form-label">IS (+) (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control" id="imposto_seletivo" name="imposto_seletivo" value="50,00" />
+              </div>
+              <div class="col-md-4">
+                <label for="icms" class="form-label">ICMS (-) (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control" id="icms" name="icms" value="180,00" />
+              </div>
+              <div class="col-md-4">
+                <label for="pis" class="form-label">PIS (-) (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control" id="pis" name="pis" value="16,50" />
+              </div>
+              <div class="col-md-4">
+                <label for="desconto_incondicional" class="form-label">Desconto Incond. (-) (R$)</label>
+                <input type="text" inputmode="decimal" data-br-money class="form-control" id="desconto_incondicional" name="desconto_incondicional" value="20,00" />
+              </div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-outline-primary">
+                  <i class="bi bi-check2-circle me-1"></i>Apurar Base de Cálculo (Legado)
+                </button>
+              </div>
+            </form>
+            <div id="baseCalculoCibsResult" class="mt-4"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
