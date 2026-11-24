@@ -27,6 +27,10 @@
     return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
+  function asList(data) {
+    return Array.isArray(data) ? data : data?.itens || [];
+  }
+
   async function fetchJson(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -35,8 +39,8 @@
 
   async function loadServicosCatalog() {
     if (_cacheServicos) return _cacheServicos;
-    const data = await fetchJson("/api/v1/tabelas/iss-servicos?limit=400");
-    _cacheServicos = data.itens || [];
+    const data = await fetchJson("/api/v1/tabelas/iss-servicos?limit=350");
+    _cacheServicos = asList(data);
     return _cacheServicos;
   }
 
@@ -44,7 +48,7 @@
     const key = dataIso || "today";
     if (_cacheIcms.has(key)) return _cacheIcms.get(key);
     const data = await fetchJson(`/api/v1/tabelas/icms-ufs?data_fato_gerador=${encodeURIComponent(dataIso)}`);
-    const map = new Map((data.itens || []).map((r) => [r.uf, r]));
+    const map = new Map(asList(data).map((r) => [r.uf, r]));
     _cacheIcms.set(key, map);
     return map;
   }
@@ -165,9 +169,8 @@
     async function refreshFase() {
       try {
         const data = await fetchJson(`/api/v1/tabelas/transicao?data_fato_gerador=${encodeURIComponent(currentDateIso())}`);
-        const pctLocal = Number(data.percentual_icms_iss_vigente || 0).toFixed(0);
-        const pctIbs = Number(data.percentual_ibs_vigente || 0).toFixed(0);
-        elFase.textContent = `${data.ano}: ${data.titulo_curto} • ICMS/ISS ${pctLocal}% | IBS ${pctIbs}%`;
+        const pctLocal = Number(data.percentual_icms_iss ?? 0).toFixed(0);
+        elFase.textContent = data.titulo_curto || `${data.ano}: ICMS/ISS ${pctLocal}%`;
         elFase.title = data.descricao || "";
       } catch {
         elFase.textContent = "Regra de transição indisponível";
@@ -194,7 +197,7 @@
         if (queryNome.trim()) params.set("nome", queryNome.trim());
         const data = await fetchJson(`/api/v1/tabelas/localidades?${params.toString()}`);
         state.munMap.clear();
-        elMunList.innerHTML = (data.itens || [])
+        elMunList.innerHTML = asList(data)
           .map((m) => {
             const label = `${m.nome} - ${m.uf_sigla} (${m.codigo_ibge})`;
             state.munMap.set(label, Number(m.codigo_ibge));

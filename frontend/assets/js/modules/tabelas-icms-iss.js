@@ -18,6 +18,10 @@
     return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
   }
 
+  function asList(data) {
+    return Array.isArray(data) ? data : data?.itens || [];
+  }
+
   async function fetchJson(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -30,7 +34,7 @@
     if (!tbody) return;
     try {
       const data = await fetchJson(`/api/v1/tabelas/icms-ufs?data_fato_gerador=${encodeURIComponent(dataIso)}`);
-      const itens = data.itens || [];
+      const itens = asList(data);
       if (badge) badge.textContent = String(itens.length);
       tbody.innerHTML = itens
         .map(
@@ -65,10 +69,10 @@
 
     async function loadServicos() {
       try {
-        const data = await fetchJson("/api/v1/tabelas/iss-servicos?limit=400");
+        const data = await fetchJson("/api/v1/tabelas/iss-servicos?limit=350");
         const vistos = new Set();
         const opts = [];
-        (data.itens || []).forEach((s) => {
+        asList(data).forEach((s) => {
           if (!vistos.has(s.subitem_lc116)) {
             vistos.add(s.subitem_lc116);
             opts.push(`<option value="${escHtml(s.subitem_lc116)}">${escHtml(s.descricao)}</option>`);
@@ -87,7 +91,7 @@
         if (nome.trim()) p.set("nome", nome.trim());
         const data = await fetchJson(`/api/v1/tabelas/localidades?${p.toString()}`);
         munMap.clear();
-        munList.innerHTML = (data.itens || [])
+        munList.innerHTML = asList(data)
           .map((m) => {
             const label = `${m.nome} - ${m.uf_sigla} (${m.codigo_ibge})`;
             munMap.set(label, Number(m.codigo_ibge));
@@ -144,7 +148,7 @@
               <strong>${escHtml(r.municipio_nome)}/${escHtml(r.uf)}</strong> (${escHtml(r.regiao)}) •
               Serviço <code>${escHtml(r.codigo_ctribnac)}</code> (${escHtml(r.descricao_servico)}):
               <strong class="fs-6 ms-1">${fmtPct(r.aliquota_iss)}</strong>
-              <span class="ms-2 badge text-bg-light border text-dark">Transição ${r.regra_transicao.ano}: ${r.regra_transicao.percentual_icms_iss_vigente}% vigente</span>
+              <span class="ms-2 badge text-bg-light border text-dark">Transição ${r.regra_transicao.ano}: ${r.regra_transicao.percentual_icms_iss}% vigente</span>
             </div>`;
         } else {
           if (manualInput) {
