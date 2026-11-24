@@ -1,14 +1,14 @@
-"""Motor de cálculo por operação (múltiplos itens) do Regime Regular (IBS/CBS/IS).
+"""Motor de cálculo por operação (múltiplos itens) do Regime Regular (IBS/CBS/IS + ICMS/ISS transição).
 
 Aplica redução de alíquota via CST/cClassTrib do SQLite, redução de base de cálculo,
 crédito presumido, compra governamental (REDUTOR_COMPRA_GOVERNAMENTAL e
-TRANSFERENCIA_CBS_ENTE_GOV), diferimento de IBS/CBS e totalização fiscal sem
-arredondamento intermediário (LC 214/2025).
+TRANSFERENCIA_CBS_ENTE_GOV), diferimento de IBS/CBS, escada opcional de transição
+EC 132/LC 214 (com ICMS UF / ISS municipal) e totalização fiscal sem arredondamento intermediário.
 """
 
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 from app.core.rounding import (
@@ -24,6 +24,10 @@ from app.modules.tabelas_oficiais.repository import (
     listar_ufs_referencia,
     obter_redutor_compra_gov_regime_geral,
     obter_transferencia_cbs_ente_gov,
+)
+from app.modules.tabelas_oficiais.tributo_local_resolver import (
+    ResumoTransicaoLocal,
+    resolver_contexto_transicao_local,
 )
 from .regras_avancadas import (
     CreditoPresumidoInput,
@@ -64,7 +68,7 @@ class ItemOperacaoRequest(BaseModel):
 class OperacaoRegimeRegularRequest(BaseModel):
     """Payload de operação com múltiplos itens no Regime Regular."""
 
-    data_fato_gerador: date = Field(default=date(2026, 1, 1))
+    data_fato_gerador: date = Field(default_factory=date.today)
     uf: str = Field(default="RS", min_length=2, max_length=2)
     tp_ente_gov: Optional[int] = Field(
         default=None,
@@ -78,6 +82,18 @@ class OperacaoRegimeRegularRequest(BaseModel):
         le=Decimal("100.00"),
         description="Override opcional do redutor governamental (%); se omitido, resolve do SQLite.",
     )
+    aplicar_transicao_ano: bool = Field(
+        default=False,
+        description="Aplica dinamicamente a escada EC 132/LC 214 (2026–2033) conforme data_fato_gerador.",
+    )
+    tipo_tributo_local: Optional[Literal["icms", "iss"]] = Field(
+        default=None,
+        description="Tributo local substituído na transição ('icms' estadual ou 'iss' municipal).",
+    )
+    codigo_ibge: Optional[int] = Field(default=None, ge=1000000, le=9999999)
+    codigo_servico_iss: Optional[str] = Field(default=None, max_length=20)
+    aliquota_icms_manual: Optional[Decimal] = Field(default=None, ge=Decimal("0.00"), le=Decimal("100.00"))
+    aliquota_iss_manual: Optional[Decimal] = Field(default=None, ge=Decimal("0.00"), le=Decimal("100.00"))
     itens: list[ItemOperacaoRequest] = Field(..., min_length=1)
 
 
@@ -92,6 +108,7 @@ class ItemOperacaoResponse(BaseModel):
     valor_ibs_mun: str
     valor_cbs: str
     valor_is: str
+    valor_tributo_local: str = "0.00"
     valor_diferido: str
     total_devido_item: str
     credito_presumido: Optional[CreditoPresumidoItemResponse] = None
@@ -109,6 +126,7 @@ class OperacaoRegimeRegularResponse(BaseModel):
     total_ibs: str
     total_cbs: str
     total_is: str
+    total_tributo_local: str = "0.00"
     total_diferido: str
     total_credito_presumido_ibs: str
     total_credito_presumido_cbs: str
@@ -116,6 +134,7 @@ class OperacaoRegimeRegularResponse(BaseModel):
     percentual_redutor_compra_gov_aplicado: str
     percentual_transferencia_cbs_aplicado: str
     total_geral_operacao: str
+    transicao_tributo_local: Optional[ResumoTransicaoLocal] = None
 
 
 def _resolver_parametros_compra_gov(
@@ -146,6 +165,21 @@ def calcular_operacao_regime_regular(
     aliq_uf_padrao = Decimal(uf_match["aliquota_ibs_uf"]) if uf_match else Decimal("10.00")
     aliq_cbs_padrao = Decimal(uf_match["aliquota_cbs"]) if uf_match else Decimal("8.80")
 
+    ctx_trans = resolver_contexto_transicao_local(
+        data_fato_gerador=payload.data_fato_gerador,
+        uf=uf_upper,
+        aliq_ibs_uf_cheia=aliq_uf_padrao,
+        aliq_ibs_mun_cheia=payload.itens[0].aliquota_ibs_mun,
+        aliq_cbs_cheia=aliq_cbs_padrao,
+        aplicar_transicao_ano=payload.aplicar_transicao_ano,
+        tipo_tributo_local=payload.tipo_tributo_local,
+        codigo_ibge=payload.codigo_ibge,
+        codigo_servico_iss=payload.codigo_servico_iss,
+        aliquota_icms_manual=payload.aliquota_icms_manual,
+        aliquota_iss_manual=payload.aliquota_iss_manual,
+    )
+    aliq_local_efet = ctx_trans.aliquota_local_efetiva if ctx_trans else Decimal("0.00")
+
     csts = listar_cst_classificacao(payload.data_fato_gerador)
     cst_map = {c["c_class_trib"]: c for c in csts}
     p_redutor_gov, p_transf_cbs = _resolver_parametros_compra_gov(payload)
@@ -156,14 +190,35 @@ def calcular_operacao_regime_regular(
     acc_ibs: list[Decimal] = []
     acc_cbs: list[Decimal] = []
     acc_is: list[Decimal] = []
+    acc_local: list[Decimal] = []
     acc_dif: list[Decimal] = []
     acc_cred_ibs: list[Decimal] = []
     acc_cred_cbs: list[Decimal] = []
     acc_cbs_transf: list[Decimal] = []
 
     for item in payload.itens:
-        aliq_uf = item.aliquota_ibs_uf if item.aliquota_ibs_uf is not None else aliq_uf_padrao
-        aliq_cbs = item.aliquota_cbs if item.aliquota_cbs is not None else aliq_cbs_padrao
+        aliq_uf_cheia = item.aliquota_ibs_uf if item.aliquota_ibs_uf is not None else aliq_uf_padrao
+        aliq_cbs_cheia = item.aliquota_cbs if item.aliquota_cbs is not None else aliq_cbs_padrao
+
+        if payload.aplicar_transicao_ano and ctx_trans is not None:
+            item_ctx = resolver_contexto_transicao_local(
+                data_fato_gerador=payload.data_fato_gerador,
+                uf=uf_upper,
+                aliq_ibs_uf_cheia=aliq_uf_cheia,
+                aliq_ibs_mun_cheia=item.aliquota_ibs_mun,
+                aliq_cbs_cheia=aliq_cbs_cheia,
+                aplicar_transicao_ano=True,
+                tipo_tributo_local=ctx_trans.resumo.tipo_tributo_local,  # type: ignore[arg-type]
+                aliquota_icms_manual=ctx_trans.resumo.aliquota_local_cheia if ctx_trans.resumo.tipo_tributo_local == "icms" else None,
+                aliquota_iss_manual=ctx_trans.resumo.aliquota_local_cheia if ctx_trans.resumo.tipo_tributo_local == "iss" else None,
+            )
+            aliq_uf = item_ctx.aliquota_ibs_uf_efetiva if item_ctx else aliq_uf_cheia
+            aliq_mun = item_ctx.aliquota_ibs_mun_efetiva if item_ctx else item.aliquota_ibs_mun
+            aliq_cbs = item_ctx.aliquota_cbs_efetiva if item_ctx else aliq_cbs_cheia
+        else:
+            aliq_uf = aliq_uf_cheia
+            aliq_mun = item.aliquota_ibs_mun
+            aliq_cbs = aliq_cbs_cheia
 
         cst_info = cst_map.get(item.c_class_trib) if item.c_class_trib else None
         red_ibs = Decimal(cst_info["aliquota_reducao_ibs"]) if cst_info else Decimal("0.00")
@@ -174,7 +229,7 @@ def calcular_operacao_regime_regular(
         )
 
         aliq_uf_efet = calcular_aliquota_efetiva_com_regras(aliq_uf, red_ibs, p_redutor_gov)
-        aliq_mun_efet = calcular_aliquota_efetiva_com_regras(item.aliquota_ibs_mun, red_ibs, p_redutor_gov)
+        aliq_mun_efet = calcular_aliquota_efetiva_com_regras(aliq_mun, red_ibs, p_redutor_gov)
         aliq_cbs_efet = calcular_aliquota_efetiva_com_regras(aliq_cbs, red_cbs, p_redutor_gov)
 
         fator_dif = dividir_por_cem(item.percentual_diferimento)
@@ -188,13 +243,14 @@ def calcular_operacao_regime_regular(
         dev_ibs_mun = multiplicar(bruto_ibs_mun, fator_devido)
         dev_cbs = multiplicar(bruto_cbs, fator_devido)
         dev_is = multiplicar(base_efetiva, dividir_por_cem(item.aliquota_is))
+        dev_local = multiplicar(base_efetiva, dividir_por_cem(aliq_local_efet))
 
         diferido_item = totalizar((
             multiplicar(bruto_ibs_uf, fator_dif),
             multiplicar(bruto_ibs_mun, fator_dif),
             multiplicar(bruto_cbs, fator_dif),
         ))
-        total_item = totalizar((dev_ibs_uf, dev_ibs_mun, dev_cbs, dev_is))
+        total_item = totalizar((dev_ibs_uf, dev_ibs_mun, dev_cbs, dev_is, dev_local))
 
         cred_dto = None
         if item.credito_presumido is not None:
@@ -224,6 +280,7 @@ def calcular_operacao_regime_regular(
         acc_ibs.append(totalizar((dev_ibs_uf, dev_ibs_mun)))
         acc_cbs.append(dev_cbs)
         acc_is.append(dev_is)
+        acc_local.append(dev_local)
         acc_dif.append(diferido_item)
 
         itens_resp.append(
@@ -236,6 +293,7 @@ def calcular_operacao_regime_regular(
                 valor_ibs_mun=formatar_moeda(dev_ibs_mun),
                 valor_cbs=formatar_moeda(dev_cbs),
                 valor_is=formatar_moeda(dev_is),
+                valor_tributo_local=formatar_moeda(dev_local),
                 valor_diferido=formatar_moeda(diferido_item),
                 total_devido_item=formatar_moeda(total_item),
                 credito_presumido=cred_dto,
@@ -246,7 +304,8 @@ def calcular_operacao_regime_regular(
     tot_ibs = totalizar(acc_ibs)
     tot_cbs = totalizar(acc_cbs)
     tot_is = totalizar(acc_is)
-    tot_geral = totalizar((tot_ibs, tot_cbs, tot_is))
+    tot_local = totalizar(acc_local)
+    tot_geral = totalizar((tot_ibs, tot_cbs, tot_is, tot_local))
 
     return OperacaoRegimeRegularResponse(
         uf=uf_upper,
@@ -257,6 +316,7 @@ def calcular_operacao_regime_regular(
         total_ibs=formatar_moeda(tot_ibs),
         total_cbs=formatar_moeda(tot_cbs),
         total_is=formatar_moeda(tot_is),
+        total_tributo_local=formatar_moeda(tot_local),
         total_diferido=formatar_moeda(totalizar(acc_dif)),
         total_credito_presumido_ibs=formatar_moeda(totalizar(acc_cred_ibs)),
         total_credito_presumido_cbs=formatar_moeda(totalizar(acc_cred_cbs)),
@@ -266,4 +326,5 @@ def calcular_operacao_regime_regular(
             p_transf_cbs if payload.tp_ente_gov in (2, 3, 4) else Decimal("0.00")
         ),
         total_geral_operacao=formatar_moeda(tot_geral),
+        transicao_tributo_local=ctx_trans.resumo if ctx_trans else None,
     )

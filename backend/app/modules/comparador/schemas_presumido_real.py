@@ -1,11 +1,13 @@
-"""Schemas Pydantic para o comparador Lucro Presumido vs. Lucro Real (com IBS/CBS)."""
+"""Schemas Pydantic para o comparador Lucro Presumido vs. Lucro Real (com IBS/CBS e transição)."""
 
 from datetime import date
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+
+from app.modules.tabelas_oficiais.tributo_local_resolver import ResumoTransicaoLocal
 
 
 class AtividadePresumido(str, Enum):
@@ -36,14 +38,14 @@ class ComparadorPresumidoRealRequest(BaseModel):
         description="Ramo de atividade que define os percentuais de presunção de IRPJ e CSLL.",
     )
     data_fato_gerador: date = Field(
-        default=date(2026, 6, 1),
-        description="Data do fato gerador para resolução de alíquotas IBS/CBS e reduções no SQLite.",
+        default_factory=date.today,
+        description="Data do fato gerador para resolução de alíquotas IBS/CBS, ICMS/ISS e transição.",
     )
     uf: Optional[str] = Field(
         default="SP",
         min_length=2,
         max_length=2,
-        description="UF de destino para resolver alíquotas oficiais IBS/CBS no SQLite.",
+        description="UF de destino para resolver alíquotas oficiais IBS/CBS e ICMS modal no SQLite.",
     )
     c_class_trib: Optional[str] = Field(
         default="000001",
@@ -78,10 +80,41 @@ class ComparadorPresumidoRealRequest(BaseModel):
         ge=Decimal("0.00"),
         description="Créditos mensais de IBS/CBS sobre insumos e compras (R$).",
     )
+    aplicar_transicao_ano: bool = Field(
+        default=False,
+        description="Aplica dinamicamente a escada EC 132/LC 214 (2026–2033) conforme data_fato_gerador.",
+    )
+    tipo_tributo_local: Optional[Literal["icms", "iss"]] = Field(
+        default=None,
+        description="Tributo local substituído na transição ('icms' estadual ou 'iss' municipal).",
+    )
+    codigo_ibge: Optional[int] = Field(
+        default=None,
+        ge=1000000,
+        le=9999999,
+        description="Código IBGE (7 dígitos) para lookup automático do ISS municipal.",
+    )
+    codigo_servico_iss: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description="Subitem LC 116 (ex: '01.01') ou código cTribNac completo.",
+    )
+    aliquota_icms_manual: Optional[Decimal] = Field(
+        default=None,
+        ge=Decimal("0.00"),
+        le=Decimal("100.00"),
+        description="Override manual da alíquota estadual de ICMS (%).",
+    )
+    aliquota_iss_manual: Optional[Decimal] = Field(
+        default=None,
+        ge=Decimal("0.00"),
+        le=Decimal("100.00"),
+        description="Override manual da alíquota municipal de ISS (%).",
+    )
 
 
 class CenarioLucroComparativo(BaseModel):
-    """Detalhamento mensal de tributos sobre lucro (IRPJ/CSLL) e consumo (IBS/CBS/IS)."""
+    """Detalhamento mensal de tributos sobre lucro (IRPJ/CSLL) e consumo (IBS/CBS/IS/ICMS/ISS)."""
 
     id: str
     nome: str
@@ -94,6 +127,7 @@ class CenarioLucroComparativo(BaseModel):
     csll: Decimal
     total_irpj_csll: Decimal
     ibs_cbs_is_liquido: Decimal
+    valor_tributo_local: Decimal = Decimal("0.00")
     carga_tributaria_total: Decimal
     aliquota_efetiva_percentual: Decimal
     observacoes: str
@@ -110,6 +144,7 @@ class ComparadorPresumidoRealResponse(BaseModel):
     atividade: AtividadePresumido
     presuncao_irpj_percentual: Decimal
     presuncao_csll_percentual: Decimal
+    transicao_tributo_local: Optional[ResumoTransicaoLocal] = None
     uf: Optional[str]
     c_class_trib: Optional[str]
     aliquota_ibs_uf_aplicada: Decimal

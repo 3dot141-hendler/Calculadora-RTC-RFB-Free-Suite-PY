@@ -2,11 +2,12 @@
 
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
 from app.modules.simples.schemas import AnexoSimples
+from app.modules.tabelas_oficiais.tributo_local_resolver import ResumoTransicaoLocal
 
 
 class ComparadorRequest(BaseModel):
@@ -37,14 +38,14 @@ class ComparadorRequest(BaseModel):
         description="Folha de salários, encargos e pró-labore dos últimos 12 meses (FS12) em reais.",
     )
     data_fato_gerador: date = Field(
-        default=date(2026, 1, 1),
-        description="Data do fato gerador para resolução de alíquotas e reduções no SQLite.",
+        default_factory=date.today,
+        description="Data do fato gerador para resolução de alíquotas, reduções e regra de transição.",
     )
     uf: Optional[str] = Field(
         default="SP",
         min_length=2,
         max_length=2,
-        description="UF de destino para resolver alíquotas oficiais IBS/CBS no SQLite.",
+        description="UF de destino para resolver alíquotas oficiais IBS/CBS e ICMS modal no SQLite.",
     )
     c_class_trib: Optional[str] = Field(
         default="000001",
@@ -85,6 +86,37 @@ class ComparadorRequest(BaseModel):
         le=Decimal("100.00"),
         description="Percentual de vendas para clientes PJ/B2B que aproveitam crédito de IBS/CBS.",
     )
+    aplicar_transicao_ano: bool = Field(
+        default=False,
+        description="Aplica dinamicamente a escada EC 132/LC 214 (2026–2033) conforme data_fato_gerador.",
+    )
+    tipo_tributo_local: Optional[Literal["icms", "iss"]] = Field(
+        default=None,
+        description="Tributo local substituído na transição ('icms' estadual ou 'iss' municipal). Não incide no DAS.",
+    )
+    codigo_ibge: Optional[int] = Field(
+        default=None,
+        ge=1000000,
+        le=9999999,
+        description="Código IBGE (7 dígitos) do município para consulta automática de ISS nos shards regionais.",
+    )
+    codigo_servico_iss: Optional[str] = Field(
+        default=None,
+        max_length=20,
+        description="Subitem LC 116 (ex: '01.01') ou código cTribNac completo (ex: '01.01.01.000').",
+    )
+    aliquota_icms_manual: Optional[Decimal] = Field(
+        default=None,
+        ge=Decimal("0.00"),
+        le=Decimal("100.00"),
+        description="Override manual da alíquota estadual de ICMS (%).",
+    )
+    aliquota_iss_manual: Optional[Decimal] = Field(
+        default=None,
+        ge=Decimal("0.00"),
+        le=Decimal("100.00"),
+        description="Override manual da alíquota municipal de ISS (%) — obrigatório para municípios não parametrizados.",
+    )
 
 
 class AnaliseFatorR(BaseModel):
@@ -115,6 +147,7 @@ class CenarioComparativo(BaseModel):
     valor_das: Decimal
     valor_ibs_cbs_bruto: Decimal
     valor_ibs_cbs_liquido: Decimal
+    valor_tributo_local: Decimal = Decimal("0.00")
     valor_is: Decimal
     creditos_aproveitados: Decimal
     credito_gerado_cliente_b2b: Decimal
@@ -129,6 +162,7 @@ class ComparadorResponse(BaseModel):
     receita_bruta_12m: Decimal
     anexo: AnexoSimples
     fator_r: Optional[AnaliseFatorR] = None
+    transicao_tributo_local: Optional[ResumoTransicaoLocal] = None
     uf: Optional[str]
     c_class_trib: Optional[str]
     aliquota_ibs_uf_aplicada: Decimal

@@ -42,6 +42,7 @@ class InsumoComparador:
     reducao_cbs: Decimal
     creditos_anteriores: Decimal
     percentual_vendas_b2b: Decimal
+    aliquota_local_efetiva: Decimal = Decimal("0.00")
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +61,11 @@ def _calcular_aliquota_efetiva_operacao(carga_total: Decimal, valor_operacao: De
 
 
 def executar_comparacao_regimes(insumo: InsumoComparador) -> ResultadoComparadorMotor:
-    """Compara Simples Unificado (DAS), Simples Híbrido (por fora) e Regime Regular."""
+    """Compara Simples Unificado (DAS), Simples Híbrido (por fora) e Regime Regular.
+
+    Regra de Ouro: o Simples Nacional Unificado (DAS) JAMAIS soma alíquota municipal de ISS
+    ou ICMS modal estadual — utiliza exclusivamente a tabela efetiva da LC 123/2006.
+    """
     base = _round_money(insumo.valor_operacao)
     fator_b2b = dividir_por_cem(insumo.percentual_vendas_b2b)
 
@@ -70,7 +75,7 @@ def executar_comparacao_regimes(insumo: InsumoComparador) -> ResultadoComparador
     parcela_ibs_cbs_das = _round_money(multiplicar(valor_das_cheio, _FRACAO_IBS_CBS_NO_DAS))
     das_residual_hibrido = _round_money(multiplicar(valor_das_cheio, _FRACAO_DAS_RESIDUAL_HIBRIDO))
 
-    # 2. Tributos do Regime Regular (IBS UF + IBS Mun + CBS + IS) com reduções oficiais
+    # 2. Tributos do Regime Regular (IBS UF + IBS Mun + CBS + IS + ICMS/ISS residual na transição)
     fator_red_ibs = subtrair(Decimal("1"), dividir_por_cem(insumo.reducao_ibs))
     fator_red_cbs = subtrair(Decimal("1"), dividir_por_cem(insumo.reducao_cbs))
 
@@ -84,12 +89,13 @@ def executar_comparacao_regimes(insumo: InsumoComparador) -> ResultadoComparador
         multiplicar(multiplicar(base, dividir_por_cem(insumo.aliquota_cbs)), fator_red_cbs)
     )
     valor_is = _round_money(multiplicar(base, dividir_por_cem(insumo.aliquota_is)))
+    valor_tributo_local = _round_money(multiplicar(base, dividir_por_cem(insumo.aliquota_local_efetiva)))
 
     ibs_cbs_bruto = _round_money(totalizar((valor_ibs_uf, valor_ibs_mun, valor_cbs)))
     creditos_ibs_cbs = _round_money(min(insumo.creditos_anteriores, ibs_cbs_bruto))
     ibs_cbs_liquido = _round_money(ibs_cbs_bruto - creditos_ibs_cbs)
 
-    # --- Cenário A: Simples Nacional Unificado (DAS) ---
+    # --- Cenário A: Simples Nacional Unificado (DAS) — BLINDADO contra tabela ISS/ICMS ---
     cred_b2b_das = _round_money(multiplicar(parcela_ibs_cbs_das, fator_b2b))
     custo_b2b_das = _round_money(base - cred_b2b_das)
     cenario_das = CenarioComparativo(
@@ -101,18 +107,21 @@ def executar_comparacao_regimes(insumo: InsumoComparador) -> ResultadoComparador
         valor_das=valor_das_cheio,
         valor_ibs_cbs_bruto=parcela_ibs_cbs_das,
         valor_ibs_cbs_liquido=parcela_ibs_cbs_das,
+        valor_tributo_local=Decimal("0.00"),
         valor_is=Decimal("0.00"),
         creditos_aproveitados=Decimal("0.00"),
         credito_gerado_cliente_b2b=cred_b2b_das,
         custo_efetivo_cliente_b2b=custo_b2b_das,
         observacoes=(
-            "Recolhimento simplificado no DAS (LC 123/2006). Não aproveita créditos de insumos "
-            "e transfere ao comprador PJ apenas o IBS/CBS efetivamente pago no DAS."
+            "Recolhimento simplificado no DAS (LC 123/2006). Não usa tabela municipal de ISS nem ICMS modal, "
+            "não aproveita créditos de insumos e transfere ao PJ apenas o IBS/CBS embutido no DAS."
         ),
     )
 
-    # --- Cenário B: Simples Nacional Híbrido (IBS/CBS por fora) ---
-    carga_hibrido = _round_money(totalizar((das_residual_hibrido, ibs_cbs_liquido, valor_is)))
+    # --- Cenário B: Simples Nacional Híbrido (IBS/CBS e tributo substituído por fora) ---
+    carga_hibrido = _round_money(
+        totalizar((das_residual_hibrido, ibs_cbs_liquido, valor_tributo_local, valor_is))
+    )
     cred_b2b_hibrido = _round_money(multiplicar(ibs_cbs_bruto, fator_b2b))
     custo_b2b_hibrido = _round_money(base - cred_b2b_hibrido)
     cenario_hibrido = CenarioComparativo(
@@ -124,20 +133,21 @@ def executar_comparacao_regimes(insumo: InsumoComparador) -> ResultadoComparador
         valor_das=das_residual_hibrido,
         valor_ibs_cbs_bruto=ibs_cbs_bruto,
         valor_ibs_cbs_liquido=ibs_cbs_liquido,
+        valor_tributo_local=valor_tributo_local,
         valor_is=valor_is,
         creditos_aproveitados=creditos_ibs_cbs,
         credito_gerado_cliente_b2b=cred_b2b_hibrido,
         custo_efetivo_cliente_b2b=custo_b2b_hibrido,
         observacoes=(
-            "Opção prevista na LC 214/2025: mantém IRPJ/CSLL/CPP no DAS reduzido, aproveita "
-            "créditos de IBS/CBS sobre insumos e transfere crédito integral de IBS/CBS ao cliente B2B."
+            "Opção prevista na LC 214/2025: mantém IRPJ/CSLL/CPP no DAS reduzido, recolhe IBS/CBS "
+            "(e ICMS/ISS residual na transição) por fora e transfere crédito integral de IBS/CBS ao cliente B2B."
         ),
     )
 
-    # --- Cenário C: Regime Regular (IBS + CBS + IS) ---
+    # --- Cenário C: Regime Regular (IBS + CBS + IS + ICMS/ISS residual na transição) ---
     total_bruto_regular = _round_money(totalizar((ibs_cbs_bruto, valor_is)))
     creditos_regular = _round_money(min(insumo.creditos_anteriores, total_bruto_regular))
-    carga_regular = _round_money(total_bruto_regular - creditos_regular)
+    carga_regular = _round_money(totalizar((total_bruto_regular - creditos_regular, valor_tributo_local)))
     cred_b2b_regular = _round_money(multiplicar(ibs_cbs_bruto, fator_b2b))
     custo_b2b_regular = _round_money(base - cred_b2b_regular)
     cenario_regular = CenarioComparativo(
@@ -149,24 +159,23 @@ def executar_comparacao_regimes(insumo: InsumoComparador) -> ResultadoComparador
         valor_das=Decimal("0.00"),
         valor_ibs_cbs_bruto=ibs_cbs_bruto,
         valor_ibs_cbs_liquido=ibs_cbs_liquido,
+        valor_tributo_local=valor_tributo_local,
         valor_is=valor_is,
         creditos_aproveitados=creditos_regular,
         credito_gerado_cliente_b2b=cred_b2b_regular,
         custo_efetivo_cliente_b2b=custo_b2b_regular,
         observacoes=(
-            "Apuração integral de IBS/CBS/IS com crédito financeiro pleno. "
+            "Apuração integral de IBS/CBS/IS (mais ICMS/ISS residual conforme ano da transição) com crédito pleno. "
             "Atenção: não inclui IRPJ, CSLL e CPP (Lucro Presumido/Real), que incidem à parte."
         ),
     )
 
     cenarios = [cenario_das, cenario_hibrido, cenario_regular]
 
-    # Análise comparativa de carga própria
     menor_carga = min(cenarios, key=lambda c: c.carga_tributaria_total)
     maior_carga = max(cenarios, key=lambda c: c.carga_tributaria_total)
     economia_maxima = _round_money(maior_carga.carga_tributaria_total - menor_carga.carga_tributaria_total)
 
-    # Competitividade B2B: prioriza menor custo efetivo para o cliente PJ, desempatando por menor carga própria
     melhor_b2b = min(
         cenarios,
         key=lambda c: (c.custo_efetivo_cliente_b2b, c.carga_tributaria_total),

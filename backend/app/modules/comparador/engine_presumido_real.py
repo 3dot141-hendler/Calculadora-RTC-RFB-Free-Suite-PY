@@ -1,4 +1,4 @@
-"""Motor puro de comparação: Lucro Presumido vs. Lucro Real no Regime Regular (IBS/CBS/IS)."""
+"""Motor puro de comparação: Lucro Presumido vs. Lucro Real no Regime Regular (IBS/CBS/IS + ICMS/ISS)."""
 
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_EVEN
@@ -51,6 +51,7 @@ class InsumoPresumidoReal:
     reducao_ibs: Decimal
     reducao_cbs: Decimal
     creditos_ibs_cbs: Decimal
+    aliquota_local_efetiva: Decimal = Decimal("0.00")
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,7 +83,7 @@ def _calcular_irpj_csll(base_irpj: Decimal, base_csll: Decimal) -> tuple[Decimal
 
 
 def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> ResultadoPresumidoRealMotor:
-    """Compara Lucro Presumido e Lucro Real somando IRPJ/CSLL com IBS/CBS/IS no Regime Regular."""
+    """Compara Lucro Presumido e Lucro Real somando IRPJ/CSLL com IBS/CBS/IS e ICMS/ISS residual."""
     receita = _round_money(insumo.receita_bruta_mensal)
     despesas = _round_money(insumo.despesas_dedutiveis_mensais)
     receita_anualizada = _round_money(multiplicar(receita, Decimal("12")))
@@ -94,7 +95,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
 
     presuncao_irpj_pct, presuncao_csll_pct = _PRESUNCAO_POR_ATIVIDADE[insumo.atividade]
 
-    # 1. IBS + CBS + IS no Regime Regular (não cumulatividade plena nos dois regimes)
+    # 1. IBS + CBS + IS + ICMS/ISS residual na transição
     fator_red_ibs = subtrair(Decimal("1"), dividir_por_cem(insumo.reducao_ibs))
     fator_red_cbs = subtrair(Decimal("1"), dividir_por_cem(insumo.reducao_cbs))
 
@@ -108,6 +109,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
         multiplicar(multiplicar(receita, dividir_por_cem(insumo.aliquota_cbs)), fator_red_cbs)
     )
     valor_is = _round_money(multiplicar(receita, dividir_por_cem(insumo.aliquota_is)))
+    valor_tributo_local = _round_money(multiplicar(receita, dividir_por_cem(insumo.aliquota_local_efetiva)))
 
     ibs_cbs_bruto = _round_money(totalizar((valor_ibs_uf, valor_ibs_mun, valor_cbs)))
     total_consumo_bruto = _round_money(totalizar((ibs_cbs_bruto, valor_is)))
@@ -120,7 +122,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
     irpj_pres, adic_pres, csll_pres, total_lucro_pres = _calcular_irpj_csll(
         base_irpj_pres, base_csll_pres
     )
-    carga_pres = _round_money(totalizar((total_lucro_pres, ibs_cbs_is_liquido)))
+    carga_pres = _round_money(totalizar((total_lucro_pres, ibs_cbs_is_liquido, valor_tributo_local)))
     aliq_efetiva_pres = _round_rate(multiplicar_por_cem(dividir(carga_pres, receita)))
 
     obs_pres = (
@@ -128,7 +130,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
         if excede_limite
         else (
             f"Presunção legal de {presuncao_irpj_pct:.0f}% (IRPJ) e {presuncao_csll_pct:.0f}% (CSLL) "
-            "independentemente do lucro efetivo. IBS/CBS apurados pelo Regime Regular."
+            "independentemente do lucro efetivo. IBS/CBS (e ICMS/ISS residual) apurados pelo Regime Regular."
         )
     )
 
@@ -144,6 +146,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
         csll=csll_pres,
         total_irpj_csll=total_lucro_pres,
         ibs_cbs_is_liquido=ibs_cbs_is_liquido,
+        valor_tributo_local=valor_tributo_local,
         carga_tributaria_total=carga_pres,
         aliquota_efetiva_percentual=aliq_efetiva_pres,
         observacoes=obs_pres,
@@ -153,7 +156,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
     irpj_real, adic_real, csll_real, total_lucro_real = _calcular_irpj_csll(
         lucro_tributavel_real, lucro_tributavel_real
     )
-    carga_real = _round_money(totalizar((total_lucro_real, ibs_cbs_is_liquido)))
+    carga_real = _round_money(totalizar((total_lucro_real, ibs_cbs_is_liquido, valor_tributo_local)))
     aliq_efetiva_real = _round_rate(multiplicar_por_cem(dividir(carga_real, receita)))
 
     obs_real = (
@@ -161,7 +164,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
         if lucro_contabil <= Decimal("0.00")
         else (
             f"Tributação sobre lucro líquido efetivo de {margem_real_pct:.2f}% "
-            "(15% IRPJ + 10% adicional acima de R$ 20 mil/mês + 9% CSLL) + IBS/CBS no Regime Regular."
+            "(15% IRPJ + 10% adicional acima de R$ 20 mil/mês + 9% CSLL) + IBS/CBS (e ICMS/ISS residual)."
         )
     )
 
@@ -177,6 +180,7 @@ def executar_comparacao_presumido_real(insumo: InsumoPresumidoReal) -> Resultado
         csll=csll_real,
         total_irpj_csll=total_lucro_real,
         ibs_cbs_is_liquido=ibs_cbs_is_liquido,
+        valor_tributo_local=valor_tributo_local,
         carga_tributaria_total=carga_real,
         aliquota_efetiva_percentual=aliq_efetiva_real,
         observacoes=obs_real,

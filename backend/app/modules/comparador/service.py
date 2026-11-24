@@ -8,6 +8,7 @@ from app.modules.tabelas_oficiais.repository import (
     listar_cst_classificacao,
     listar_ufs_referencia,
 )
+from app.modules.tabelas_oficiais.tributo_local_resolver import resolver_contexto_transicao_local
 from .engine import InsumoComparador, executar_comparacao_regimes
 from .engine_presumido_real import (
     InsumoPresumidoReal,
@@ -58,7 +59,7 @@ def _resolver_aliquotas_referencia(
 
 
 def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorResponse:
-    """Resolve alíquotas vigentes (UF e cClassTrib) no SQLite e executa o comparador Simples/Regular."""
+    """Resolve alíquotas vigentes (UF, cClassTrib, ICMS/ISS e transição) e executa o comparador."""
     uf_norm, aliq_ibs_uf, aliq_cbs, reducao_ibs, reducao_cbs = _resolver_aliquotas_referencia(
         data_fato_gerador=payload.data_fato_gerador,
         uf=payload.uf,
@@ -66,6 +67,24 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
         override_ibs_uf=payload.aliquota_ibs_uf,
         override_cbs=payload.aliquota_cbs,
     )
+
+    ctx_trans = resolver_contexto_transicao_local(
+        data_fato_gerador=payload.data_fato_gerador,
+        uf=uf_norm,
+        aliq_ibs_uf_cheia=aliq_ibs_uf,
+        aliq_ibs_mun_cheia=payload.aliquota_ibs_mun,
+        aliq_cbs_cheia=aliq_cbs,
+        aplicar_transicao_ano=payload.aplicar_transicao_ano,
+        tipo_tributo_local=payload.tipo_tributo_local,
+        codigo_ibge=payload.codigo_ibge,
+        codigo_servico_iss=payload.codigo_servico_iss,
+        aliquota_icms_manual=payload.aliquota_icms_manual,
+        aliquota_iss_manual=payload.aliquota_iss_manual,
+    )
+    ibs_uf_efet = ctx_trans.aliquota_ibs_uf_efetiva if ctx_trans else aliq_ibs_uf
+    ibs_mun_efet = ctx_trans.aliquota_ibs_mun_efetiva if ctx_trans else payload.aliquota_ibs_mun
+    cbs_efet = ctx_trans.aliquota_cbs_efetiva if ctx_trans else aliq_cbs
+    local_efet = ctx_trans.aliquota_local_efetiva if ctx_trans else Decimal("0.00")
 
     analise_fator_r: Optional[AnaliseFatorR] = None
     anexo_efetivo = payload.anexo
@@ -83,14 +102,15 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
             receita_bruta_12m=payload.receita_bruta_12m,
             valor_operacao=payload.valor_operacao,
             anexo=anexo_efetivo,
-            aliquota_ibs_uf=aliq_ibs_uf,
-            aliquota_ibs_mun=payload.aliquota_ibs_mun,
-            aliquota_cbs=aliq_cbs,
+            aliquota_ibs_uf=ibs_uf_efet,
+            aliquota_ibs_mun=ibs_mun_efet,
+            aliquota_cbs=cbs_efet,
             aliquota_is=payload.aliquota_is,
             reducao_ibs=reducao_ibs,
             reducao_cbs=reducao_cbs,
             creditos_anteriores=payload.creditos_anteriores,
             percentual_vendas_b2b=payload.percentual_vendas_b2b,
+            aliquota_local_efetiva=local_efet,
         )
     )
 
@@ -103,11 +123,12 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
         receita_bruta_12m=payload.receita_bruta_12m,
         anexo=anexo_efetivo,
         fator_r=analise_fator_r,
+        transicao_tributo_local=ctx_trans.resumo if ctx_trans else None,
         uf=uf_norm,
         c_class_trib=payload.c_class_trib,
-        aliquota_ibs_uf_aplicada=aliq_ibs_uf,
-        aliquota_ibs_mun_aplicada=payload.aliquota_ibs_mun,
-        aliquota_cbs_aplicada=aliq_cbs,
+        aliquota_ibs_uf_aplicada=ibs_uf_efet,
+        aliquota_ibs_mun_aplicada=ibs_mun_efet,
+        aliquota_cbs_aplicada=cbs_efet,
         reducao_ibs_percentual=reducao_ibs,
         reducao_cbs_percentual=reducao_cbs,
         percentual_vendas_b2b=payload.percentual_vendas_b2b,
@@ -122,7 +143,7 @@ def simular_comparativo_regimes(payload: ComparadorRequest) -> ComparadorRespons
 def simular_presumido_vs_real(
     payload: ComparadorPresumidoRealRequest,
 ) -> ComparadorPresumidoRealResponse:
-    """Resolve alíquotas vigentes (UF e cClassTrib) no SQLite e compara Lucro Presumido vs. Real."""
+    """Resolve alíquotas vigentes (UF, cClassTrib, ICMS/ISS e transição) e compara Presumido vs. Real."""
     uf_norm, aliq_ibs_uf, aliq_cbs, reducao_ibs, reducao_cbs = _resolver_aliquotas_referencia(
         data_fato_gerador=payload.data_fato_gerador,
         uf=payload.uf,
@@ -131,18 +152,37 @@ def simular_presumido_vs_real(
         override_cbs=payload.aliquota_cbs,
     )
 
+    ctx_trans = resolver_contexto_transicao_local(
+        data_fato_gerador=payload.data_fato_gerador,
+        uf=uf_norm,
+        aliq_ibs_uf_cheia=aliq_ibs_uf,
+        aliq_ibs_mun_cheia=payload.aliquota_ibs_mun,
+        aliq_cbs_cheia=aliq_cbs,
+        aplicar_transicao_ano=payload.aplicar_transicao_ano,
+        tipo_tributo_local=payload.tipo_tributo_local,
+        codigo_ibge=payload.codigo_ibge,
+        codigo_servico_iss=payload.codigo_servico_iss,
+        aliquota_icms_manual=payload.aliquota_icms_manual,
+        aliquota_iss_manual=payload.aliquota_iss_manual,
+    )
+    ibs_uf_efet = ctx_trans.aliquota_ibs_uf_efetiva if ctx_trans else aliq_ibs_uf
+    ibs_mun_efet = ctx_trans.aliquota_ibs_mun_efetiva if ctx_trans else payload.aliquota_ibs_mun
+    cbs_efet = ctx_trans.aliquota_cbs_efetiva if ctx_trans else aliq_cbs
+    local_efet = ctx_trans.aliquota_local_efetiva if ctx_trans else Decimal("0.00")
+
     resultado = executar_comparacao_presumido_real(
         InsumoPresumidoReal(
             receita_bruta_mensal=payload.receita_bruta_mensal,
             despesas_dedutiveis_mensais=payload.despesas_dedutiveis_mensais,
             atividade=payload.atividade,
-            aliquota_ibs_uf=aliq_ibs_uf,
-            aliquota_ibs_mun=payload.aliquota_ibs_mun,
-            aliquota_cbs=aliq_cbs,
+            aliquota_ibs_uf=ibs_uf_efet,
+            aliquota_ibs_mun=ibs_mun_efet,
+            aliquota_cbs=cbs_efet,
             aliquota_is=payload.aliquota_is,
             reducao_ibs=reducao_ibs,
             reducao_cbs=reducao_cbs,
             creditos_ibs_cbs=payload.creditos_ibs_cbs,
+            aliquota_local_efetiva=local_efet,
         )
     )
 
@@ -155,10 +195,11 @@ def simular_presumido_vs_real(
         atividade=payload.atividade,
         presuncao_irpj_percentual=resultado.presuncao_irpj_percentual,
         presuncao_csll_percentual=resultado.presuncao_csll_percentual,
+        transicao_tributo_local=ctx_trans.resumo if ctx_trans else None,
         uf=uf_norm,
         c_class_trib=payload.c_class_trib,
-        aliquota_ibs_uf_aplicada=aliq_ibs_uf,
-        aliquota_cbs_aplicada=aliq_cbs,
+        aliquota_ibs_uf_aplicada=ibs_uf_efet,
+        aliquota_cbs_aplicada=cbs_efet,
         reducao_ibs_percentual=reducao_ibs,
         ibs_cbs_bruto=resultado.ibs_cbs_bruto,
         creditos_ibs_cbs_aproveitados=resultado.creditos_ibs_cbs_aproveitados,
