@@ -89,6 +89,13 @@
             <input id="${uid}_icmsInput" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="Auto UF (ex: 17,00)" />
           </div>
 
+          <div class="col-md-6" id="${uid}_icmsHintWrap">
+            <div class="small text-muted border rounded px-2 py-1 bg-white d-flex flex-wrap align-items-center justify-content-between gap-2" style="font-size: 0.78rem;">
+              <span><i class="bi bi-geo-alt me-1 text-secondary"></i>ICMS é estadual (usa a UF). Para selecionar <strong>município</strong>, use <strong>ISS Municipal</strong>.</span>
+              <button type="button" id="${uid}_switchIssBtn" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold" style="font-size: 0.78rem;">Trocar para ISS →</button>
+            </div>
+          </div>
+
           <div class="col-md-2 d-none" id="${uid}_ufIssWrap">
             <label for="${uid}_ufIss" class="form-label small fw-semibold mb-1" title="LC 116/2003 art. 3º: regra geral no estabelecimento prestador (emissão da NFS-e), independente da UF Destino do IBS.">UF Emissão/ISS</label>
             <select id="${uid}_ufIss" class="form-select form-select-sm">${buildUfOptions(initialUf)}</select>
@@ -132,10 +139,11 @@
 
     const els = {
       enable: byId("enable"), body: byId("body"), fase: byId("faseBadge"), tipo: byId("tipo"),
-      icmsWrap: byId("icmsWrap"), icmsInput: byId("icmsInput"), ufIssWrap: byId("ufIssWrap"),
-      ufIss: byId("ufIss"), munWrap: byId("munWrap"), munInput: byId("munInput"),
-      munList: byId("munList"), servWrap: byId("servWrap"), servInput: byId("servInput"),
-      servList: byId("servList"), issWrap: byId("issWrap"), issInput: byId("issInput"), msg: byId("originMsg"),
+      icmsWrap: byId("icmsWrap"), icmsInput: byId("icmsInput"), icmsHintWrap: byId("icmsHintWrap"),
+      switchIssBtn: byId("switchIssBtn"), ufIssWrap: byId("ufIssWrap"), ufIss: byId("ufIss"),
+      munWrap: byId("munWrap"), munInput: byId("munInput"), munList: byId("munList"),
+      servWrap: byId("servWrap"), servInput: byId("servInput"), servList: byId("servList"),
+      issWrap: byId("issWrap"), issInput: byId("issInput"), msg: byId("originMsg"),
     };
     const state = {
       munMap: new Map(), selectedIbge: null, autoIcms: null, autoIss: null,
@@ -153,6 +161,7 @@
       els.body.classList.toggle("opacity-50", !els.enable.checked);
       const isIss = els.tipo.value === "iss";
       els.icmsWrap.classList.toggle("d-none", isIss);
+      els.icmsHintWrap.classList.toggle("d-none", isIss);
       [els.ufIssWrap, els.munWrap, els.servWrap, els.issWrap].forEach((w) => w.classList.toggle("d-none", !isIss));
     }
 
@@ -275,6 +284,11 @@
       state.icmsUserEdited = false;
       state.issUserEdited = false;
       refreshAll();
+    });
+    els.switchIssBtn.addEventListener("click", () => {
+      els.tipo.value = "iss";
+      state.issUserEdited = false;
+      refreshAll().then(() => els.munInput.focus());
     });
     els.icmsInput.addEventListener("input", () => { state.icmsUserEdited = true; });
     els.issInput.addEventListener("input", () => {
