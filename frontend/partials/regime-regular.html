@@ -156,7 +156,7 @@
             <form id="baseUnificadaNfeForm" class="row g-2" novalidate>
               <div class="col-md-2">
                 <label class="form-label small">Ano (2026–2033)</label>
-                <input type="number" min="2026" max="2033" value="2026" class="form-control form-control-sm" name="unif_ano" />
+                <input type="number" min="2026" max="2033" data-default-year value="2026" class="form-control form-control-sm" name="unif_ano" />
               </div>
               <div class="col-md-2">
                 <label class="form-label small">Modelo DF-e</label>
@@ -216,7 +216,7 @@
             <form id="baseUnificadaNfseForm" class="row g-2" novalidate>
               <div class="col-md-2">
                 <label class="form-label small">Ano</label>
-                <input type="number" min="2026" max="2035" value="2026" class="form-control form-control-sm" name="nfse_ano" />
+                <input type="number" min="2026" max="2035" data-default-year value="2026" class="form-control form-control-sm" name="nfse_ano" />
               </div>
               <div class="col-md-3">
                 <label class="form-label small">Opção Simples (opSimpNac)</label>
@@ -243,6 +243,7 @@
                   <option value="locacao9903">Locação de Imóveis (99.03)</option>
                 </select>
               </div>
+              <div id="nfseIssHelperBox" class="col-12"></div>
               <div class="col-md-3">
                 <label class="form-label small">vServ (R$)</label>
                 <input type="text" inputmode="decimal" data-br-money class="form-control form-control-sm" name="nfse_vserv" value="1.000,00" />

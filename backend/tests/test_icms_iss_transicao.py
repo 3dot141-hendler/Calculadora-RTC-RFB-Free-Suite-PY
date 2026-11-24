@@ -204,6 +204,7 @@ def test_assets_frontend_icms_iss_servidos_e_modulares(client: TestClient) -> No
         "/assets/js/modules/aliquota-local-picker.js",
         "/assets/js/modules/tabelas-icms-iss.js",
         "/assets/js/modules/regime-regular-operacao.js",
+        "/assets/js/modules/regime-regular-unificada.js",
     ]
     for p in paths:
         r = client.get(p)
@@ -219,6 +220,11 @@ def test_assets_frontend_icms_iss_servidos_e_modulares(client: TestClient) -> No
     assert "iss-servicos?limit=350" in picker_js
     assert "percentual_icms_iss" in picker_js
 
+    unif_js = client.get("/assets/js/modules/regime-regular-unificada.js").text
+    assert "nfseIssAutoToggle" in unif_js
+    assert "Insira a alíquota ISS (2% a 5%)" in unif_js
+    assert "iss-servicos?limit=350" in unif_js
+
     tab_js = client.get("/assets/js/modules/tabelas-icms-iss.js").text
     assert "iss-servicos?limit=350" in tab_js
     assert "percentual_icms_iss" in tab_js
@@ -233,6 +239,7 @@ def test_assets_frontend_icms_iss_servidos_e_modulares(client: TestClient) -> No
 
     rr_html = client.get("/partials/regime-regular.html").text
     assert 'id="opLocalPicker"' in rr_html
+    assert 'id="nfseIssHelperBox"' in rr_html
 
     arquivos_modulares = [
         FRONTEND_DIR / "index.html",
@@ -246,6 +253,7 @@ def test_assets_frontend_icms_iss_servidos_e_modulares(client: TestClient) -> No
         FRONTEND_DIR / "assets" / "js" / "modules" / "comparador-presumido-real.js",
         FRONTEND_DIR / "assets" / "js" / "modules" / "comparador-report-templates.js",
         FRONTEND_DIR / "assets" / "js" / "modules" / "regime-regular-operacao.js",
+        FRONTEND_DIR / "assets" / "js" / "modules" / "regime-regular-unificada.js",
     ]
     for arq in arquivos_modulares:
         linhas = len(arq.read_text(encoding="utf-8").splitlines())
