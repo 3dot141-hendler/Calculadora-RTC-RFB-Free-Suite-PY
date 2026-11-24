@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.core.transicao_rtc import obter_regra_transicao
 from .repository import (
     buscar_localidades_ibge,
     listar_atividades_simples,
@@ -16,6 +17,11 @@ from .repository_avancado import (
     listar_nbs_aplicavel,
     listar_ncm_imposto_seletivo,
     listar_tratamentos_tributarios,
+)
+from .repository_iss import (
+    listar_icms_ufs,
+    listar_iss_servicos,
+    obter_iss_municipal,
 )
 
 router = APIRouter(prefix="/tabelas", tags=["Tabelas Oficiais (RFB)"])
@@ -59,6 +65,46 @@ def endpoint_listar_ufs(
 ) -> list[dict[str, Any]]:
     """Lista alíquotas de referência de IBS Estadual e CBS por UF."""
     return listar_ufs_referencia(data_fato_gerador=data_fato_gerador)
+
+
+@router.get("/icms-ufs", summary="Consultar alíquotas modais internas de ICMS por UF")
+def endpoint_listar_icms_ufs(
+    data_fato_gerador: date | None = Query(default=None),
+    uf: str | None = Query(default=None, min_length=2, max_length=2),
+) -> list[dict[str, Any]]:
+    """Lista alíquotas modais internas de ICMS (+ FCP) vigentes por UF na data informada."""
+    return listar_icms_ufs(data_fato_gerador=data_fato_gerador, uf=uf)
+
+
+@router.get("/iss-servicos", summary="Consultar catálogo de serviços ISS (cTribNac / LC 116)")
+def endpoint_listar_iss_servicos(
+    q: str | None = Query(default=None, min_length=1, max_length=80),
+    limit: int = Query(default=100, ge=1, le=350),
+) -> list[dict[str, Any]]:
+    """Lista códigos de tributação nacional e subitens da LC 116 disponíveis para lookup de ISS."""
+    return listar_iss_servicos(q=q, limit=limit)
+
+
+@router.get("/iss-municipal", summary="Consultar alíquota municipal de ISS por IBGE e serviço")
+def endpoint_obter_iss_municipal(
+    codigo_ibge: int = Query(..., ge=1000000, le=9999999),
+    codigo_servico: str = Query(..., min_length=3, max_length=20),
+    data_fato_gerador: date | None = Query(default=None),
+) -> dict[str, Any]:
+    """Consulta o ISS oficial no shard SQLite regional ou retorna origem 'nao_parametrizado'."""
+    return obter_iss_municipal(
+        codigo_ibge=codigo_ibge,
+        codigo_servico=codigo_servico,
+        data_fato_gerador=data_fato_gerador,
+    )
+
+
+@router.get("/transicao", summary="Consultar regra constitucional de transição RTC para uma data")
+def endpoint_obter_transicao(
+    data_fato_gerador: date | None = Query(default=None),
+) -> dict[str, Any]:
+    """Retorna os fatores de ICMS/ISS vs IBS/CBS (EC 132 / LC 214) vigentes na data informada."""
+    return obter_regra_transicao(data_fato_gerador).to_dict()
 
 
 @router.get("/localidades", summary="Consultar municípios IBGE (catálogo DANFSE)")
