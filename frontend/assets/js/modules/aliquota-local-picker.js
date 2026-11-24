@@ -1,10 +1,11 @@
 /**
  * AliquotaLocalPicker - Componente reutilizável para Transição EC 132/LC 214 + ICMS UF / ISS Municipal.
- * Usado no Comparador (Simples/Híbrido/Regular e Presumido/Real) e no Regime Regular Multi-Itens.
+ * Separa explicitamente UF Destino (IBS/ICMS) da UF/Município de Emissão/Incidência do ISS (LC 116, art. 3º).
  */
 (function (window, document) {
   "use strict";
 
+  const UFS_BR = "AC,AL,AM,AP,BA,CE,DF,ES,GO,MA,MG,MS,MT,PA,PB,PE,PI,PR,RJ,RN,RO,RR,RS,SC,SE,SP,TO".split(",");
   const _cacheIcms = new Map();
   let _cacheServicos = null;
 
@@ -23,8 +24,7 @@
 
   function fmtBrPct(val) {
     const num = Number(val);
-    if (Number.isNaN(num)) return "";
-    return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return Number.isNaN(num) ? "" : num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function asList(data) {
@@ -39,8 +39,7 @@
 
   async function loadServicosCatalog() {
     if (_cacheServicos) return _cacheServicos;
-    const data = await fetchJson("/api/v1/tabelas/iss-servicos?limit=350");
-    _cacheServicos = asList(data);
+    _cacheServicos = asList(await fetchJson("/api/v1/tabelas/iss-servicos?limit=350"));
     return _cacheServicos;
   }
 
@@ -53,7 +52,11 @@
     return map;
   }
 
-  function buildMarkup(uid, showSimplesNote) {
+  function buildUfOptions(selectedUf) {
+    return UFS_BR.map((uf) => `<option value="${uf}"${uf === selectedUf ? " selected" : ""}>${uf}</option>`).join("");
+  }
+
+  function buildMarkup(uid, showSimplesNote, initialUf) {
     const simplesNote = showSimplesNote
       ? '<span class="badge text-bg-light border text-muted"><i class="bi bi-shield-check me-1 text-success"></i>Simples DAS usa apenas LC 123</span>'
       : "";
@@ -86,19 +89,24 @@
             <input id="${uid}_icmsInput" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="Auto UF (ex: 17,00)" />
           </div>
 
+          <div class="col-md-2 d-none" id="${uid}_ufIssWrap">
+            <label for="${uid}_ufIss" class="form-label small fw-semibold mb-1" title="LC 116/2003 art. 3º: regra geral no estabelecimento prestador (emissão da NFS-e), independente da UF Destino do IBS.">UF Emissão/ISS</label>
+            <select id="${uid}_ufIss" class="form-select form-select-sm">${buildUfOptions(initialUf)}</select>
+          </div>
+
           <div class="col-md-3 d-none" id="${uid}_munWrap">
-            <label for="${uid}_munInput" class="form-label small fw-semibold mb-1">Município IBGE (da UF)</label>
-            <input id="${uid}_munInput" list="${uid}_munList" type="text" class="form-control form-control-sm" placeholder="Digite a cidade..." autocomplete="off" />
+            <label for="${uid}_munInput" class="form-label small fw-semibold mb-1">Município Emissão/ISS (Prestador)</label>
+            <input id="${uid}_munInput" list="${uid}_munList" type="text" class="form-control form-control-sm" placeholder="Cidade de emissão da NFS-e..." autocomplete="off" />
             <datalist id="${uid}_munList"></datalist>
           </div>
 
-          <div class="col-md-3 d-none" id="${uid}_servWrap">
-            <label for="${uid}_servInput" class="form-label small fw-semibold mb-1">Serviço LC 116 / cTribNac</label>
-            <input id="${uid}_servInput" list="${uid}_servList" type="text" class="form-control form-control-sm" value="01.01" placeholder="Ex: 01.01 ou 14.01" autocomplete="off" />
+          <div class="col-md-2 d-none" id="${uid}_servWrap">
+            <label for="${uid}_servInput" class="form-label small fw-semibold mb-1">Serviço LC 116</label>
+            <input id="${uid}_servInput" list="${uid}_servList" type="text" class="form-control form-control-sm" value="01.01" placeholder="Ex: 01.01" autocomplete="off" />
             <datalist id="${uid}_servList"></datalist>
           </div>
 
-          <div class="col-md-3 d-none" id="${uid}_issWrap">
+          <div class="col-md-2 d-none" id="${uid}_issWrap">
             <label for="${uid}_issInput" class="form-label small fw-semibold mb-1">Alíquota ISS (%)</label>
             <input id="${uid}_issInput" type="text" inputmode="decimal" class="form-control form-control-sm" placeholder="Insira a alíquota ISS (2% a 5%)" />
           </div>
@@ -116,88 +124,68 @@
     if (!container) return null;
 
     const uid = `lp_${containerId}`;
-    const form = opts.form;
-    const ufEl = form.querySelector(opts.ufSelector);
-    const dateEl = form.querySelector(opts.dateSelector);
-    container.innerHTML = buildMarkup(uid, Boolean(opts.showSimplesNote));
+    const byId = (s) => document.getElementById(`${uid}_${s}`);
+    const ufEl = opts.form.querySelector(opts.ufSelector);
+    const dateEl = opts.form.querySelector(opts.dateSelector);
+    const initialUf = (ufEl?.value || "RS").toUpperCase();
+    container.innerHTML = buildMarkup(uid, Boolean(opts.showSimplesNote), initialUf);
 
-    const elEnable = document.getElementById(`${uid}_enable`);
-    const elBody = document.getElementById(`${uid}_body`);
-    const elFase = document.getElementById(`${uid}_faseBadge`);
-    const elTipo = document.getElementById(`${uid}_tipo`);
-    const elIcmsWrap = document.getElementById(`${uid}_icmsWrap`);
-    const elIcmsInput = document.getElementById(`${uid}_icmsInput`);
-    const elMunWrap = document.getElementById(`${uid}_munWrap`);
-    const elMunInput = document.getElementById(`${uid}_munInput`);
-    const elMunList = document.getElementById(`${uid}_munList`);
-    const elServWrap = document.getElementById(`${uid}_servWrap`);
-    const elServInput = document.getElementById(`${uid}_servInput`);
-    const elServList = document.getElementById(`${uid}_servList`);
-    const elIssWrap = document.getElementById(`${uid}_issWrap`);
-    const elIssInput = document.getElementById(`${uid}_issInput`);
-    const elMsg = document.getElementById(`${uid}_originMsg`);
-
+    const els = {
+      enable: byId("enable"), body: byId("body"), fase: byId("faseBadge"), tipo: byId("tipo"),
+      icmsWrap: byId("icmsWrap"), icmsInput: byId("icmsInput"), ufIssWrap: byId("ufIssWrap"),
+      ufIss: byId("ufIss"), munWrap: byId("munWrap"), munInput: byId("munInput"),
+      munList: byId("munList"), servWrap: byId("servWrap"), servInput: byId("servInput"),
+      servList: byId("servList"), issWrap: byId("issWrap"), issInput: byId("issInput"), msg: byId("originMsg"),
+    };
     const state = {
-      munMap: new Map(),
-      selectedIbge: null,
-      autoIcms: null,
-      autoIss: null,
-      issOrigem: "nao_informado",
-      icmsUserEdited: false,
-      issUserEdited: false,
+      munMap: new Map(), selectedIbge: null, autoIcms: null, autoIss: null,
+      issOrigem: "nao_informado", icmsUserEdited: false, issUserEdited: false, ufIssUserEdited: false,
     };
 
-    if (opts.defaultTipo === "iss") elTipo.value = "iss";
+    if (opts.defaultTipo === "iss") els.tipo.value = "iss";
 
-    function currentDateIso() {
-      return dateEl?.value || (window.BrNumber ? window.BrNumber.getTodayIso() : new Date().toISOString().slice(0, 10));
-    }
-    function currentUf() {
-      return (ufEl?.value || "RS").toUpperCase();
-    }
+    const currentDateIso = () =>
+      dateEl?.value || (window.BrNumber ? window.BrNumber.getTodayIso() : new Date().toISOString().slice(0, 10));
+    const currentUfDestino = () => (ufEl?.value || "RS").toUpperCase();
+    const currentUfIss = () => (els.ufIss?.value || currentUfDestino()).toUpperCase();
 
     function toggleVisibility() {
-      const enabled = elEnable.checked;
-      elBody.classList.toggle("opacity-50", !enabled);
-      const isIss = elTipo.value === "iss";
-      elIcmsWrap.classList.toggle("d-none", isIss);
-      elMunWrap.classList.toggle("d-none", !isIss);
-      elServWrap.classList.toggle("d-none", !isIss);
-      elIssWrap.classList.toggle("d-none", !isIss);
+      els.body.classList.toggle("opacity-50", !els.enable.checked);
+      const isIss = els.tipo.value === "iss";
+      els.icmsWrap.classList.toggle("d-none", isIss);
+      [els.ufIssWrap, els.munWrap, els.servWrap, els.issWrap].forEach((w) => w.classList.toggle("d-none", !isIss));
     }
 
     async function refreshFase() {
       try {
         const data = await fetchJson(`/api/v1/tabelas/transicao?data_fato_gerador=${encodeURIComponent(currentDateIso())}`);
         const pctLocal = Number(data.percentual_icms_iss ?? 0).toFixed(0);
-        elFase.textContent = data.titulo_curto || `${data.ano}: ICMS/ISS ${pctLocal}%`;
-        elFase.title = data.descricao || "";
+        els.fase.textContent = data.titulo_curto || `${data.ano}: ICMS/ISS ${pctLocal}%`;
+        els.fase.title = data.descricao || "";
       } catch {
-        elFase.textContent = "Regra de transição indisponível";
+        els.fase.textContent = "Regra de transição indisponível";
       }
     }
 
     async function refreshIcms() {
       try {
-        const map = await loadIcmsMap(currentDateIso());
-        const reg = map.get(currentUf());
-        if (reg) {
-          state.autoIcms = reg.aliquota_total;
-          if (!state.icmsUserEdited) elIcmsInput.value = fmtBrPct(reg.aliquota_total);
-          elMsg.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>ICMS modal <strong>${escHtml(reg.uf)}</strong>: ${fmtBrPct(reg.aliquota_interna)}% + FCP ${fmtBrPct(reg.aliquota_fcp)}% = <strong>${fmtBrPct(reg.aliquota_total)}%</strong> (${escHtml(reg.fundamentacao)}).`;
-        }
+        const reg = (await loadIcmsMap(currentDateIso())).get(currentUfDestino());
+        if (!reg) return;
+        state.autoIcms = reg.aliquota_total;
+        if (!state.icmsUserEdited) els.icmsInput.value = fmtBrPct(reg.aliquota_total);
+        els.msg.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>ICMS modal <strong>${escHtml(reg.uf)}</strong>: ${fmtBrPct(reg.aliquota_interna)}% + FCP ${fmtBrPct(reg.aliquota_fcp)}% = <strong>${fmtBrPct(reg.aliquota_total)}%</strong> (${escHtml(reg.fundamentacao)}).`;
       } catch {
-        elMsg.textContent = "Não foi possível consultar a tabela de ICMS UF.";
+        els.msg.textContent = "Não foi possível consultar a tabela de ICMS UF.";
       }
     }
 
     async function refreshMunicipios(queryNome = "") {
       try {
-        const params = new URLSearchParams({ uf: currentUf(), limit: "60" });
+        const params = new URLSearchParams({ uf: currentUfIss(), limit: "60" });
         if (queryNome.trim()) params.set("nome", queryNome.trim());
         const data = await fetchJson(`/api/v1/tabelas/localidades?${params.toString()}`);
         state.munMap.clear();
-        elMunList.innerHTML = asList(data)
+        els.munList.innerHTML = asList(data)
           .map((m) => {
             const label = `${m.nome} - ${m.uf_sigla} (${m.codigo_ibge})`;
             state.munMap.set(label, Number(m.codigo_ibge));
@@ -205,15 +193,13 @@
             return `<option value="${escHtml(label)}"></option>`;
           })
           .join("");
-      } catch {
-        /* silencioso */
-      }
+      } catch { /* silencioso */ }
     }
 
     async function refreshServicosDatalist() {
       try {
+        if (els.servList.children.length > 0) return;
         const itens = await loadServicosCatalog();
-        if (elServList.children.length > 0) return;
         const vistos = new Set();
         const optsHtml = [];
         itens.forEach((s) => {
@@ -223,14 +209,12 @@
           }
           optsHtml.push(`<option value="${escHtml(s.codigo_ctribnac)}">${escHtml(s.descricao)}</option>`);
         });
-        elServList.innerHTML = optsHtml.join("");
-      } catch {
-        /* silencioso */
-      }
+        els.servList.innerHTML = optsHtml.join("");
+      } catch { /* silencioso */ }
     }
 
     function resolveIbgeFromInput() {
-      const raw = elMunInput.value.trim();
+      const raw = els.munInput.value.trim();
       if (state.munMap.has(raw)) return state.munMap.get(raw);
       const match = raw.match(/\((\d{7})\)/);
       if (match) return Number(match[1]);
@@ -241,41 +225,43 @@
     async function refreshIssLookup() {
       const ibge = resolveIbgeFromInput();
       state.selectedIbge = ibge;
-      const serv = elServInput.value.trim();
+      const serv = els.servInput.value.trim();
+      const ufDest = currentUfDestino();
       if (!ibge || !serv) {
         state.autoIss = null;
         state.issOrigem = "nao_informado";
-        elIssInput.placeholder = "Insira a alíquota ISS (2% a 5%)";
-        elMsg.innerHTML = '<i class="bi bi-info-circle me-1"></i>Selecione um município IBGE e o subitem LC 116 para buscar a alíquota oficial, ou digite manualmente.';
+        els.issInput.placeholder = "Insira a alíquota ISS (2% a 5%)";
+        els.msg.innerHTML = `<i class="bi bi-info-circle me-1"></i><strong>LC 116 (art. 3º):</strong> ISS incide no município de emissão/prestador (exceto obras, limpeza e eventos no local da prestação); IBS continua na UF Destino (<strong>${escHtml(ufDest)}</strong>).`;
         return;
       }
       try {
         const url = `/api/v1/tabelas/iss-municipal?codigo_ibge=${ibge}&codigo_servico=${encodeURIComponent(serv)}&data_fato_gerador=${encodeURIComponent(currentDateIso())}`;
         const res = await fetchJson(url);
         state.issOrigem = res.origem;
+        const splitInfo = res.uf && res.uf !== ufDest ? ` • IBS no Destino: <strong>${escHtml(ufDest)}</strong>` : "";
         if (res.encontrado && res.aliquota_iss !== null) {
           state.autoIss = res.aliquota_iss;
           state.issUserEdited = false;
-          elIssInput.value = fmtBrPct(res.aliquota_iss);
-          elIssInput.classList.remove("border-warning");
-          elMsg.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i><strong>${escHtml(res.municipio_nome)}/${escHtml(res.uf)}</strong> (${escHtml(res.regiao)}) • Serviço <code>${escHtml(res.codigo_ctribnac)}</code>: <strong>${fmtBrPct(res.aliquota_iss)}%</strong> (Portal Nacional NFS-e).`;
+          els.issInput.value = fmtBrPct(res.aliquota_iss);
+          els.issInput.classList.remove("border-warning");
+          els.msg.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>ISS em <strong>${escHtml(res.municipio_nome)}/${escHtml(res.uf)}</strong> (${escHtml(res.regiao)}) • Serviço <code>${escHtml(res.codigo_ctribnac)}</code>: <strong>${fmtBrPct(res.aliquota_iss)}%</strong> (Portal Nacional NFS-e)${splitInfo}.`;
         } else {
           state.autoIss = null;
           state.issUserEdited = false;
-          elIssInput.value = "";
-          elIssInput.placeholder = "Insira a alíquota ISS (2% a 5%)";
-          elIssInput.classList.add("border-warning");
-          elMsg.innerHTML = `<span class="text-warning-emphasis"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Município não parametrizado</strong> — ${escHtml(res.mensagem)}</span>`;
+          els.issInput.value = "";
+          els.issInput.placeholder = "Insira a alíquota ISS (2% a 5%)";
+          els.issInput.classList.add("border-warning");
+          els.msg.innerHTML = `<span class="text-warning-emphasis"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>Município não parametrizado</strong> — ${escHtml(res.mensagem)}${splitInfo}</span>`;
         }
       } catch {
-        elMsg.textContent = "Falha ao consultar alíquota municipal de ISS.";
+        els.msg.textContent = "Falha ao consultar alíquota municipal de ISS.";
       }
     }
 
     async function refreshAll() {
       toggleVisibility();
       await refreshFase();
-      if (elTipo.value === "icms") {
+      if (els.tipo.value === "icms") {
         await refreshIcms();
       } else {
         await refreshServicosDatalist();
@@ -284,37 +270,44 @@
       }
     }
 
-    elEnable.addEventListener("change", () => toggleVisibility());
-    elTipo.addEventListener("change", () => {
+    els.enable.addEventListener("change", () => toggleVisibility());
+    els.tipo.addEventListener("change", () => {
       state.icmsUserEdited = false;
       state.issUserEdited = false;
       refreshAll();
     });
-    elIcmsInput.addEventListener("input", () => { state.icmsUserEdited = true; });
-    elIssInput.addEventListener("input", () => {
+    els.icmsInput.addEventListener("input", () => { state.icmsUserEdited = true; });
+    els.issInput.addEventListener("input", () => {
       state.issUserEdited = true;
-      elIssInput.classList.remove("border-warning");
+      els.issInput.classList.remove("border-warning");
+    });
+    els.ufIss.addEventListener("change", () => {
+      state.ufIssUserEdited = true;
+      els.munInput.value = "";
+      state.selectedIbge = null;
+      state.issUserEdited = false;
+      refreshMunicipios().then(() => refreshIssLookup());
     });
 
     let munTimer = null;
-    elMunInput.addEventListener("input", () => {
+    els.munInput.addEventListener("input", () => {
       clearTimeout(munTimer);
       munTimer = setTimeout(async () => {
         const ibge = resolveIbgeFromInput();
-        if (ibge) {
-          await refreshIssLookup();
-        } else if (elMunInput.value.trim().length >= 2) {
-          await refreshMunicipios(elMunInput.value.trim());
-        }
+        if (ibge) await refreshIssLookup();
+        else if (els.munInput.value.trim().length >= 2) await refreshMunicipios(els.munInput.value.trim());
       }, 220);
     });
-    elMunInput.addEventListener("change", () => refreshIssLookup());
-    elServInput.addEventListener("change", () => refreshIssLookup());
+    els.munInput.addEventListener("change", () => refreshIssLookup());
+    els.servInput.addEventListener("change", () => refreshIssLookup());
 
     ufEl?.addEventListener("change", () => {
       state.icmsUserEdited = false;
-      elMunInput.value = "";
-      state.selectedIbge = null;
+      if (!state.ufIssUserEdited && els.ufIss) {
+        els.ufIss.value = currentUfDestino();
+        els.munInput.value = "";
+        state.selectedIbge = null;
+      }
       refreshAll();
     });
     dateEl?.addEventListener("change", () => refreshAll());
@@ -325,25 +318,23 @@
       refresh: refreshAll,
       setTipo(tipo) {
         if (tipo === "icms" || tipo === "iss") {
-          elTipo.value = tipo;
+          els.tipo.value = tipo;
           refreshAll();
         }
       },
       getPayloadFields() {
-        if (!elEnable.checked) return { aplicar_transicao_ano: false };
-        const tipo = elTipo.value;
+        if (!els.enable.checked) return { aplicar_transicao_ano: false };
+        const tipo = els.tipo.value;
         const out = { aplicar_transicao_ano: true, tipo_tributo_local: tipo };
         if (tipo === "icms") {
-          const manual = parseApiNum(elIcmsInput.value);
+          const manual = parseApiNum(els.icmsInput.value);
           if (state.icmsUserEdited && manual !== null) out.aliquota_icms_manual = manual;
         } else {
           if (state.selectedIbge) out.codigo_ibge = state.selectedIbge;
-          const serv = elServInput.value.trim();
+          const serv = els.servInput.value.trim();
           if (serv) out.codigo_servico_iss = serv;
-          const manual = parseApiNum(elIssInput.value);
-          if (manual !== null && (state.issUserEdited || state.autoIss === null)) {
-            out.aliquota_iss_manual = manual;
-          }
+          const manual = parseApiNum(els.issInput.value);
+          if (manual !== null && (state.issUserEdited || state.autoIss === null)) out.aliquota_iss_manual = manual;
         }
         return out;
       },

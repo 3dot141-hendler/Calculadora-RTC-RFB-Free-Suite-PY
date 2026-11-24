@@ -85,6 +85,30 @@ def test_catalogo_servicos_iss_responde_com_limit_350(client: TestClient) -> Non
     assert len(itens) == 333
 
 
+def test_iss_origem_prestador_independente_da_uf_destino_ibs(client: TestClient) -> None:
+    """LC 116 art. 3º: ISS do prestador (Goiânia/GO) resolve independente da UF Destino do IBS (SP)."""
+    resp = client.post(
+        "/api/v1/comparador/presumido-vs-real",
+        json={
+            "receita_bruta_mensal": "100000.00",
+            "despesas_dedutiveis_mensais": "40000.00",
+            "atividade": "SERVICOS_GERAIS",
+            "data_fato_gerador": "2026-06-15",
+            "uf": "SP",
+            "aplicar_transicao_ano": True,
+            "tipo_tributo_local": "iss",
+            "codigo_ibge": 5208707,
+            "codigo_servico_iss": "01.01",
+        },
+    )
+    assert resp.status_code == 200
+    trans = resp.json()["transicao_tributo_local"]
+    assert trans["tipo_tributo_local"] == "iss"
+    assert trans["origem_aliquota_local"] == "portal_nfse"
+    assert "Goiânia" in (trans["municipio_nome"] or "")
+    assert Decimal(trans["aliquota_local_cheia"]) >= Decimal("2.00")
+
+
 @pytest.mark.parametrize(
     ("ano", "pct_esperado"),
     [
@@ -190,6 +214,8 @@ def test_assets_frontend_icms_iss_servidos_e_modulares(client: TestClient) -> No
     assert "window.AliquotaLocalPicker" in picker_js
     assert "Insira a alíquota ISS (2% a 5%)" in picker_js
     assert "Município não parametrizado" in picker_js
+    assert "UF Emissão/ISS" in picker_js
+    assert "Município Emissão/ISS (Prestador)" in picker_js
     assert "iss-servicos?limit=350" in picker_js
     assert "percentual_icms_iss" in picker_js
 
