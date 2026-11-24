@@ -1,9 +1,10 @@
 /**
- * ComparadorPresumidoRealModule - Comparador Lucro Presumido vs. Lucro Real (+ IBS/CBS).
+ * ComparadorPresumidoRealModule - Comparador Lucro Presumido vs. Lucro Real (+ IBS/CBS + ICMS/ISS).
  */
 (function (window, document) {
   "use strict";
 
+  let localPicker = null;
   const PRESETS = {
     "servicos-alta-margem": {
       receita_bruta_mensal: "500000.00",
@@ -56,9 +57,7 @@
   function readNum(form, name, fallback = "0.00") {
     const el = form.elements.namedItem(name);
     if (!el) return fallback;
-    if (window.BrNumber) {
-      return window.BrNumber.parseToApiDecimal(el.value, fallback);
-    }
+    if (window.BrNumber) return window.BrNumber.parseToApiDecimal(el.value, fallback);
     const raw = String(el.value ?? "").trim().replace(",", ".");
     return raw === "" ? fallback : raw;
   }
@@ -82,9 +81,8 @@
       }
     });
     const dateEl = form.elements.namedItem("data_fato_gerador");
-    if (dateEl && !dateEl.value) {
-      dateEl.value = getTodayIso();
-    }
+    if (dateEl && !dateEl.value) dateEl.value = getTodayIso();
+    localPicker?.setTipo(key === "comercio-atacado" ? "icms" : "iss");
   }
 
   function setPrintButtonState(enabled) {
@@ -94,25 +92,16 @@
 
   function renderResultado(container, data) {
     const nowLabel = new Date().toLocaleTimeString("pt-BR");
-    const maxAliq = Math.max(
-      ...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0),
-      1
-    );
+    const maxAliq = Math.max(...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0), 1);
+    const transBannerHtml = window.AliquotaLocalPicker?.renderResumoBanner(data.transicao_tributo_local) || "";
+    const localLabel = (data.transicao_tributo_local?.tipo_tributo_local || "ICMS/ISS").toUpperCase();
 
     const cardsHtml = data.cenarios
       .map((c) => {
         const isMelhor = c.id === data.melhor_regime;
-        const borderClass = !c.elegivel
-          ? "border-danger border-2"
-          : isMelhor
-            ? "border-success border-2"
-            : "border";
-        const barWidth = Math.min(
-          Math.round((Number(c.aliquota_efetiva_percentual) / maxAliq) * 100),
-          100
-        );
+        const borderClass = !c.elegivel ? "border-danger border-2" : isMelhor ? "border-success border-2" : "border";
+        const barWidth = Math.min(Math.round((Number(c.aliquota_efetiva_percentual) / maxAliq) * 100), 100);
         const barColor = c.id === "lucro_presumido" ? "bg-info" : "bg-primary";
-
         const badge = !c.elegivel
           ? '<span class="badge text-bg-danger"><i class="bi bi-slash-circle me-1"></i>Inelegível (&gt; R$ 78 mi/ano)</span>'
           : isMelhor
@@ -128,7 +117,7 @@
                 <p class="text-muted small mb-3">${c.subtitulo}</p>
 
                 <div class="p-3 rounded bg-light mb-3">
-                  <div class="small text-muted">Carga Tributária Mensal Total (IRPJ + CSLL + IBS/CBS)</div>
+                  <div class="small text-muted">Carga Tributária Mensal Total (IRPJ + CSLL + IBS/CBS + ${localLabel})</div>
                   <div class="fs-4 fw-bold text-dark">${formatBRL(c.carga_tributaria_total)}</div>
                   <div class="d-flex justify-content-between small mt-1">
                     <span>Alíquota Efetiva Total</span>
@@ -145,12 +134,8 @@
                     <strong>${formatBRL(c.base_calculo_irpj)} / ${formatBRL(c.base_calculo_csll)}</strong>
                   </li>
                   <li class="list-group-item px-0 d-flex justify-content-between">
-                    <span class="text-muted">IRPJ Básico (15%)</span>
-                    <strong>${formatBRL(c.irpj_basico)}</strong>
-                  </li>
-                  <li class="list-group-item px-0 d-flex justify-content-between">
-                    <span class="text-muted">Adicional IRPJ (10% &gt; R$ 20k/mês)</span>
-                    <strong>${formatBRL(c.adicional_irpj)}</strong>
+                    <span class="text-muted">IRPJ Básico (15%) + Adicional (10%)</span>
+                    <strong>${formatBRL(c.irpj_basico)} + ${formatBRL(c.adicional_irpj)}</strong>
                   </li>
                   <li class="list-group-item px-0 d-flex justify-content-between">
                     <span class="text-muted">CSLL (9%)</span>
@@ -163,6 +148,10 @@
                   <li class="list-group-item px-0 d-flex justify-content-between">
                     <span class="text-muted">IBS + CBS + IS Líquido (Regime Regular)</span>
                     <strong>${formatBRL(c.ibs_cbs_is_liquido)}</strong>
+                  </li>
+                  <li class="list-group-item px-0 d-flex justify-content-between">
+                    <span class="text-muted">${localLabel} (Transição)</span>
+                    <strong>${formatBRL(c.valor_tributo_local || 0)}</strong>
                   </li>
                 </ul>
 
@@ -179,9 +168,7 @@
     const tableRowsHtml = data.cenarios
       .map((c) => {
         const irpjTotal = Number(c.irpj_basico) + Number(c.adicional_irpj);
-        const statusTag = c.elegivel
-          ? ""
-          : ' <span class="badge text-bg-danger ms-1">Inelegível</span>';
+        const statusTag = c.elegivel ? "" : ' <span class="badge text-bg-danger ms-1">Inelegível</span>';
         return `
           <tr>
             <td class="fw-semibold">${c.nome}${statusTag}</td>
@@ -190,6 +177,7 @@
             <td class="text-end">${formatBRL(c.csll)}</td>
             <td class="text-end text-primary fw-semibold">${formatBRL(c.total_irpj_csll)}</td>
             <td class="text-end">${formatBRL(c.ibs_cbs_is_liquido)}</td>
+            <td class="text-end">${formatBRL(c.valor_tributo_local || 0)}</td>
             <td class="text-end fw-bold">${formatBRL(c.carga_tributaria_total)} (${formatPct(c.aliquota_efetiva_percentual)})</td>
           </tr>
         `;
@@ -199,27 +187,19 @@
     const alertClass = data.excede_limite_presumido ? "alert-warning" : "alert-primary";
 
     container.innerHTML = `
-      <div class="alert ${alertClass} border-0 shadow-sm mb-4">
+      <div class="alert ${alertClass} border-0 shadow-sm mb-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
           <strong><i class="bi bi-lightbulb-fill me-2"></i>Diagnóstico: Lucro Presumido vs. Lucro Real</strong>
           <div class="d-flex flex-wrap gap-1">
-            <span class="badge text-bg-light border text-dark">
-              Receita Anualizada ${formatBRL(data.receita_anualizada_estimada)}
-            </span>
-            <span class="badge text-bg-light border text-dark">
-              Lucro Real ${formatBRL(data.lucro_contabil_mensal)} (${formatPct(data.margem_lucro_real_percentual)})
-            </span>
-            <span class="badge text-bg-light border text-dark">
-              Economia: ${formatBRL(data.economia_mensal_reais)}/mês • ${formatBRL(data.economia_anual_estimada_reais)}/ano
-            </span>
-            <span class="badge text-bg-success">
-              <i class="bi bi-check2-circle me-1"></i>Atualizado ${nowLabel}
-            </span>
+            <span class="badge text-bg-light border text-dark">Receita Anualizada ${formatBRL(data.receita_anualizada_estimada)}</span>
+            <span class="badge text-bg-light border text-dark">Lucro Real ${formatBRL(data.lucro_contabil_mensal)} (${formatPct(data.margem_lucro_real_percentual)})</span>
+            <span class="badge text-bg-light border text-dark">Economia: ${formatBRL(data.economia_mensal_reais)}/mês • ${formatBRL(data.economia_anual_estimada_reais)}/ano</span>
+            <span class="badge text-bg-success"><i class="bi bi-check2-circle me-1"></i>Atualizado ${nowLabel}</span>
           </div>
         </div>
         <p class="mb-0 small">${data.resumo_executivo}</p>
       </div>
-
+      ${transBannerHtml}
       <div class="row g-3 mb-4">${cardsHtml}</div>
 
       <div class="card shadow-sm border-0">
@@ -239,6 +219,7 @@
                 <th class="text-end">CSLL (9%)</th>
                 <th class="text-end">Subtotal Lucro</th>
                 <th class="text-end">IBS/CBS/IS Líq.</th>
+                <th class="text-end">${localLabel}</th>
                 <th class="text-end">Carga Total</th>
               </tr>
             </thead>
@@ -250,9 +231,7 @@
 
     const inlinePrintBtn = container.querySelector('[data-comparador-print="presumido_real"]');
     if (inlinePrintBtn) {
-      inlinePrintBtn.addEventListener("click", () => {
-        window.ComparadorReport?.printReport("presumido_real");
-      });
+      inlinePrintBtn.addEventListener("click", () => window.ComparadorReport?.printReport("presumido_real"));
     }
   }
 
@@ -278,6 +257,7 @@
       return;
     }
 
+    const localFields = localPicker?.getPayloadFields() || {};
     const payload = {
       receita_bruta_mensal: readNum(form, "receita_bruta_mensal", "0.00"),
       despesas_dedutiveis_mensais: readNum(form, "despesas_dedutiveis_mensais", "0.00"),
@@ -288,6 +268,7 @@
       aliquota_ibs_mun: readNum(form, "aliquota_ibs_mun", "0.00"),
       aliquota_is: readNum(form, "aliquota_is", "0.00"),
       creditos_ibs_cbs: readNum(form, "creditos_ibs_cbs", "0.00"),
+      ...localFields,
     };
 
     if (submitBtn) {
@@ -340,11 +321,20 @@
 
     window.BrNumber?.applyDefaultTodayDates(form);
     window.BrNumber?.attachMoneyInputs(form);
+    localPicker = window.AliquotaLocalPicker?.mount("prLocalPicker", {
+      form,
+      ufSelector: "#prUf",
+      dateSelector: "#prData",
+      defaultTipo: "icms",
+      showSimplesNote: false,
+    });
+
+    form.querySelector("#prAtividade")?.addEventListener("change", (ev) => {
+      localPicker?.setTipo(ev.target.value.startsWith("SERVICOS_") ? "iss" : "icms");
+    });
 
     if (printBtn) {
-      printBtn.addEventListener("click", () => {
-        window.ComparadorReport?.printReport("presumido_real");
-      });
+      printBtn.addEventListener("click", () => window.ComparadorReport?.printReport("presumido_real"));
     }
 
     document.querySelectorAll("[data-pr-preset]").forEach((btn) => {
@@ -359,7 +349,6 @@
       runComparison(form, container, true);
     });
 
-    // Pré-carrega o resultado da segunda aba ao abrir o comparador
     runComparison(form, container, false);
   });
 })(window, document);

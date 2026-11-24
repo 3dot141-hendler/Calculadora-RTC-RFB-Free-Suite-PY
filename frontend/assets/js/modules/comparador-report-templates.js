@@ -1,6 +1,6 @@
 /**
  * ComparadorReportTemplates - Templates HTML puros (A4, 1 página)
- * para as duas abas do Comparador Tributário.
+ * para as duas abas do Comparador Tributário (incluindo ICMS/ISS transição EC 132).
  */
 (function (window) {
   "use strict";
@@ -101,11 +101,20 @@
     `;
   }
 
+  function formatTransicaoParam(trans) {
+    if (!trans) return "";
+    const tipo = (trans.tipo_tributo_local || "ICMS/ISS").toUpperCase();
+    return `${trans.ano} • ${tipo} ${formatPct(trans.aliquota_local_efetiva)} (${formatPct(trans.percentual_icms_iss_vigente)} vigente)`;
+  }
+
   function buildSimplesRegularHtml(payload, data, clientName) {
     const maxAliq = Math.max(...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0), 1);
+    const trans = data.transicao_tributo_local;
+    const localLabel = (trans?.tipo_tributo_local || "ICMS/ISS").toUpperCase();
     const extras = [];
     if (Number(data.aliquota_ibs_mun_aplicada) > 0) extras.push(`Mun ${formatPct(data.aliquota_ibs_mun_aplicada)}`);
     if (Number(payload.aliquota_is) > 0) extras.push(`IS ${formatPct(payload.aliquota_is)}`);
+    if (trans) extras.push(formatTransicaoParam(trans));
     const aliqResumo = `IBS ${formatPct(data.aliquota_ibs_uf_aplicada)} • CBS ${formatPct(data.aliquota_cbs_aplicada)}${extras.length ? ` • ${extras.join(" • ")}` : ""}`;
     const fr = data.fator_r;
     const anexoTexto = fr && fr.aplicado
@@ -150,6 +159,7 @@
             <ul class="rp-metrics">
               <li><span>DAS (LC 123)</span><strong>${formatBRL(c.valor_das)}</strong></li>
               <li><span>IBS + CBS Líquido</span><strong>${formatBRL(c.valor_ibs_cbs_liquido)}</strong></li>
+              <li><span>${localLabel} (Transição)</span><strong>${formatBRL(c.valor_tributo_local || 0)}</strong></li>
               <li><span>Créditos Aproveitados</span><strong>${formatBRL(c.creditos_aproveitados)}</strong></li>
               <li><span>Crédito p/ Cliente B2B</span><strong>${formatBRL(c.credito_gerado_cliente_b2b)}</strong></li>
               <li><span>Custo Efetivo B2B</span><strong>${formatBRL(c.custo_efetivo_cliente_b2b)}</strong></li>
@@ -165,6 +175,7 @@
           <td>${escapeHtml(c.nome)}</td>
           <td class="rp-num">${formatBRL(c.valor_das)}</td>
           <td class="rp-num">${formatBRL(c.valor_ibs_cbs_bruto)}</td>
+          <td class="rp-num">${formatBRL(c.valor_tributo_local || 0)}</td>
           <td class="rp-num">${formatBRL(c.creditos_aproveitados)}</td>
           <td class="rp-num">${formatBRL(c.carga_tributaria_total)} (${formatPct(c.aliquota_efetiva_percentual)})</td>
           <td class="rp-num">${formatBRL(c.credito_gerado_cliente_b2b)}</td>
@@ -175,8 +186,8 @@
     return `
       ${buildHeaderHtml(
         "Simples (DAS) vs. Simples Híbrido vs. Regime Regular",
-        "Análise comparativa para ME/EPP (até R$ 4,8 mi/ano) considerando carga própria e competitividade B2B.",
-        "LC 214/2025 • LC 123/2006",
+        "Análise comparativa para ME/EPP (até R$ 4,8 mi/ano) considerando carga própria, transição ICMS/ISS e competitividade B2B.",
+        "LC 214/2025 • EC 132 • LC 123/2006",
         clientName
       )}
       ${paramsHtml}
@@ -195,21 +206,24 @@
           <thead>
             <tr>
               <th>Cenário</th><th class="rp-num">DAS</th><th class="rp-num">IBS/CBS Bruto</th>
-              <th class="rp-num">Créditos Insumos</th><th class="rp-num">Carga Própria</th>
+              <th class="rp-num">${localLabel}</th><th class="rp-num">Créditos Insumos</th><th class="rp-num">Carga Própria</th>
               <th class="rp-num">Crédito p/ B2B</th><th class="rp-num">Custo Efetivo B2B</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
-      ${buildFooterHtml("Cálculos baseados nas faixas progressivas da LC 123/2006 (incluindo Fator R quando ativo) e regras de transição IBS/CBS da LC 214/2025.")}
+      ${buildFooterHtml("Cálculos baseados nas faixas progressivas da LC 123/2006 (incluindo Fator R quando ativo) e escada de transição EC 132/LC 214/2025.")}
     `;
   }
 
   function buildPresumidoRealHtml(payload, data, clientName) {
     const maxAliq = Math.max(...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0), 1);
+    const trans = data.transicao_tributo_local;
+    const localLabel = (trans?.tipo_tributo_local || "ICMS/ISS").toUpperCase();
     const ativLabel = ATIVIDADE_LABELS[data.atividade] || data.atividade;
     const presuncaoTxt = `${formatPct(data.presuncao_irpj_percentual)} IR | ${formatPct(data.presuncao_csll_percentual)} CSLL`;
+    const aliqTxt = `${data.c_class_trib || "-"} • IBS ${formatPct(data.aliquota_ibs_uf_aplicada)} / CBS ${formatPct(data.aliquota_cbs_aplicada)}${trans ? ` • ${formatTransicaoParam(trans)}` : ""}`;
 
     const paramsHtml = buildParamsGridHtml([
       ["Receita Bruta Mensal", formatBRL(data.receita_bruta_mensal)],
@@ -218,7 +232,7 @@
       ["Lucro Contábil / Margem", `${formatBRL(data.lucro_contabil_mensal)} (${formatPct(data.margem_lucro_real_percentual)})`],
       ["Atividade / Presunção", `${ativLabel} (${presuncaoTxt})`],
       ["Fato Gerador / UF", `${formatDateBR(payload.data_fato_gerador)} • ${data.uf || "-"}`],
-      ["cClassTrib / Alíquotas", `${data.c_class_trib || "-"} • IBS ${formatPct(data.aliquota_ibs_uf_aplicada)} / CBS ${formatPct(data.aliquota_cbs_aplicada)}`],
+      ["cClassTrib / Alíquotas", aliqTxt],
       ["Créditos IBS/CBS Mensais", formatBRL(data.creditos_ibs_cbs_aproveitados)],
     ]);
 
@@ -240,18 +254,18 @@
             <h3 class="rp-card-name">${escapeHtml(c.nome)}</h3>
             <p class="rp-card-sub">${escapeHtml(c.subtitulo)}</p>
             <div class="rp-kpi">
-              <div class="rp-kpi-label">Carga Tributária Mensal Total (IRPJ + CSLL + IBS/CBS)</div>
+              <div class="rp-kpi-label">Carga Tributária Mensal Total (IRPJ + CSLL + IBS/CBS + ${localLabel})</div>
               <div class="rp-kpi-value">${formatBRL(c.carga_tributaria_total)}</div>
               <div class="rp-kpi-row"><span>Alíquota Efetiva Total</span><strong>${formatPct(c.aliquota_efetiva_percentual)}</strong></div>
               <div class="rp-bar-track"><div class="rp-bar-fill ${barClass}" style="width: ${barWidth}%;"></div></div>
             </div>
             <ul class="rp-metrics">
               <li><span>Base IRPJ / CSLL</span><strong>${formatBRL(c.base_calculo_irpj)} / ${formatBRL(c.base_calculo_csll)}</strong></li>
-              <li><span>IRPJ Básico (15%)</span><strong>${formatBRL(c.irpj_basico)}</strong></li>
-              <li><span>Adicional IRPJ (10% &gt; R$ 20k)</span><strong>${formatBRL(c.adicional_irpj)}</strong></li>
+              <li><span>IRPJ (15%) + Adic. (10%)</span><strong>${formatBRL(c.irpj_basico)} + ${formatBRL(c.adicional_irpj)}</strong></li>
               <li><span>CSLL (9%)</span><strong>${formatBRL(c.csll)}</strong></li>
               <li><span>Subtotal Lucro (IRPJ + CSLL)</span><strong>${formatBRL(c.total_irpj_csll)}</strong></li>
               <li><span>IBS + CBS + IS Líquido</span><strong>${formatBRL(c.ibs_cbs_is_liquido)}</strong></li>
+              <li><span>${localLabel} (Transição)</span><strong>${formatBRL(c.valor_tributo_local || 0)}</strong></li>
             </ul>
             <p class="rp-card-note">${escapeHtml(c.observacoes)}</p>
           </article>`;
@@ -270,6 +284,7 @@
             <td class="rp-num">${formatBRL(c.csll)}</td>
             <td class="rp-num">${formatBRL(c.total_irpj_csll)}</td>
             <td class="rp-num">${formatBRL(c.ibs_cbs_is_liquido)}</td>
+            <td class="rp-num">${formatBRL(c.valor_tributo_local || 0)}</td>
             <td class="rp-num">${formatBRL(c.carga_tributaria_total)} (${formatPct(c.aliquota_efetiva_percentual)})</td>
           </tr>`;
       })
@@ -280,9 +295,9 @@
 
     return `
       ${buildHeaderHtml(
-        "Lucro Presumido vs. Lucro Real (+ IBS/CBS)",
-        "Comparativo mensal de IRPJ (15% + Adicional 10%), CSLL (9%) e IBS/CBS no Regime Regular pela margem real.",
-        "LC 214/2025 • Lei 9.249/1995",
+        "Lucro Presumido vs. Lucro Real (+ IBS/CBS + ICMS/ISS)",
+        "Comparativo mensal de IRPJ (15% + Adicional 10%), CSLL (9%), IBS/CBS e tributo local na transição EC 132.",
+        "LC 214/2025 • EC 132 • Lei 9.249/1995",
         clientName
       )}
       ${paramsHtml}
@@ -302,13 +317,13 @@
             <tr>
               <th>Regime</th><th class="rp-num">Base IRPJ / CSLL</th><th class="rp-num">IRPJ + Adic.</th>
               <th class="rp-num">CSLL (9%)</th><th class="rp-num">Subtotal Lucro</th>
-              <th class="rp-num">IBS/CBS/IS Líq.</th><th class="rp-num">Carga Total</th>
+              <th class="rp-num">IBS/CBS/IS Líq.</th><th class="rp-num">${localLabel}</th><th class="rp-num">Carga Total</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
       </div>
-      ${buildFooterHtml("Apuração estimativa considerando Lei 9.249/1995 (presunção e adicional IRPJ > R$ 20 mil/mês, teto R$ 78 mi/ano) e IBS/CBS pela LC 214/2025.")}
+      ${buildFooterHtml("Apuração estimativa considerando Lei 9.249/1995 (presunção e adicional IRPJ > R$ 20 mil/mês, teto R$ 78 mi/ano) e transição EC 132/LC 214/2025.")}
     `;
   }
 

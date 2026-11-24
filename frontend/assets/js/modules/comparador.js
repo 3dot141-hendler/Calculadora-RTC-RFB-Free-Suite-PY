@@ -4,6 +4,7 @@
 (function (window, document) {
   "use strict";
 
+  let localPicker = null;
   const PRESETS = {
     "comercio-b2b": {
       receita_bruta_12m: "720000.00",
@@ -92,6 +93,7 @@
     const dateEl = form.elements.namedItem("data_fato_gerador");
     if (dateEl && !dateEl.value) dateEl.value = getTodayIso();
     window.ComparadorFatorR?.syncUiState(form);
+    localPicker?.setTipo(presetKey === "comercio-b2b" ? "icms" : "iss");
   }
 
   function formatValidationError(detail) {
@@ -114,39 +116,24 @@
 
   function renderResultado(container, data) {
     const nowLabel = new Date().toLocaleTimeString("pt-BR");
-    const maxAliq = Math.max(
-      ...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0),
-      1
-    );
+    const maxAliq = Math.max(...data.cenarios.map((c) => Number(c.aliquota_efetiva_percentual) || 0), 1);
     const fatorRHtml = window.ComparadorFatorR?.renderBannerHtml(data.fator_r) || "";
+    const transBannerHtml = window.AliquotaLocalPicker?.renderResumoBanner(data.transicao_tributo_local) || "";
+    const localLabel = (data.transicao_tributo_local?.tipo_tributo_local || "ICMS/ISS").toUpperCase();
 
     const cardsHtml = data.cenarios
       .map((cenario) => {
         const isMelhorCarga = cenario.id === data.melhor_cenario_carga_propria;
         const isMelhorB2b =
-          cenario.id === data.melhor_cenario_competitividade_b2b &&
-          Number(data.percentual_vendas_b2b) > 0;
+          cenario.id === data.melhor_cenario_competitividade_b2b && Number(data.percentual_vendas_b2b) > 0;
         const borderClass = isMelhorCarga ? "border-success border-2" : "border";
-        const barWidth = Math.min(
-          Math.round((Number(cenario.aliquota_efetiva_percentual) / maxAliq) * 100),
-          100
-        );
+        const barWidth = Math.min(Math.round((Number(cenario.aliquota_efetiva_percentual) / maxAliq) * 100), 100);
         const barColor =
-          cenario.id === "simples_das"
-            ? "bg-success"
-            : cenario.id === "simples_hibrido"
-              ? "bg-info"
-              : "bg-primary";
+          cenario.id === "simples_das" ? "bg-success" : cenario.id === "simples_hibrido" ? "bg-info" : "bg-primary";
         const badges = [
-          isMelhorCarga
-            ? '<span class="badge text-bg-success"><i class="bi bi-trophy me-1"></i>Menor Carga Própria</span>'
-            : "",
-          isMelhorB2b
-            ? '<span class="badge text-bg-primary"><i class="bi bi-building-check me-1"></i>Melhor Crédito B2B</span>'
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" ");
+          isMelhorCarga ? '<span class="badge text-bg-success"><i class="bi bi-trophy me-1"></i>Menor Carga Própria</span>' : "",
+          isMelhorB2b ? '<span class="badge text-bg-primary"><i class="bi bi-building-check me-1"></i>Melhor Crédito B2B</span>' : "",
+        ].filter(Boolean).join(" ");
 
         return `
           <div class="col-lg-4">
@@ -174,6 +161,10 @@
                   <li class="list-group-item px-0 d-flex justify-content-between">
                     <span class="text-muted">IBS + CBS Líquido</span>
                     <strong>${formatBRL(cenario.valor_ibs_cbs_liquido)}</strong>
+                  </li>
+                  <li class="list-group-item px-0 d-flex justify-content-between">
+                    <span class="text-muted">${localLabel} (Transição)</span>
+                    <strong>${formatBRL(cenario.valor_tributo_local || 0)}</strong>
                   </li>
                   <li class="list-group-item px-0 d-flex justify-content-between">
                     <span class="text-muted">Créditos Aproveitados</span>
@@ -205,6 +196,7 @@
             <td class="fw-semibold">${c.nome}</td>
             <td class="text-end">${formatBRL(c.valor_das)}</td>
             <td class="text-end">${formatBRL(c.valor_ibs_cbs_bruto)}</td>
+            <td class="text-end">${formatBRL(c.valor_tributo_local || 0)}</td>
             <td class="text-end text-success">${formatBRL(c.creditos_aproveitados)}</td>
             <td class="text-end fw-bold">${formatBRL(c.carga_tributaria_total)} (${formatPct(c.aliquota_efetiva_percentual)})</td>
             <td class="text-end text-primary fw-semibold">${formatBRL(c.credito_gerado_cliente_b2b)}</td>
@@ -215,7 +207,7 @@
       .join("");
 
     container.innerHTML = `
-      <div class="alert alert-primary border-0 shadow-sm mb-4">
+      <div class="alert alert-primary border-0 shadow-sm mb-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
           <strong><i class="bi bi-lightbulb-fill me-2"></i>Resumo Executivo para Decisão Tributária</strong>
           <div class="d-flex flex-wrap gap-1">
@@ -225,13 +217,12 @@
             <span class="badge text-bg-light border text-dark">
               UF ${data.uf || "-"} • IBS ${formatPct(data.aliquota_ibs_uf_aplicada)} • CBS ${formatPct(data.aliquota_cbs_aplicada)} • Red. ${formatPct(data.reducao_ibs_percentual)}
             </span>
-            <span class="badge text-bg-success">
-              <i class="bi bi-check2-circle me-1"></i>Atualizado ${nowLabel}
-            </span>
+            <span class="badge text-bg-success"><i class="bi bi-check2-circle me-1"></i>Atualizado ${nowLabel}</span>
           </div>
         </div>
         <p class="mb-0 small">${data.resumo_executivo}</p>
       </div>
+      ${transBannerHtml}
       ${fatorRHtml}
       <div class="row g-3 mb-4">${cardsHtml}</div>
       <div class="card shadow-sm border-0">
@@ -248,6 +239,7 @@
                 <th>Cenário</th>
                 <th class="text-end">DAS</th>
                 <th class="text-end">IBS/CBS Bruto</th>
+                <th class="text-end">${localLabel}</th>
                 <th class="text-end">Créditos Insumos</th>
                 <th class="text-end">Carga Própria</th>
                 <th class="text-end">Crédito p/ B2B</th>
@@ -262,9 +254,7 @@
 
     const inlinePrintBtn = container.querySelector('[data-comparador-print="simples_regular"]');
     if (inlinePrintBtn) {
-      inlinePrintBtn.addEventListener("click", () => {
-        window.ComparadorReport?.printReport("simples_regular");
-      });
+      inlinePrintBtn.addEventListener("click", () => window.ComparadorReport?.printReport("simples_regular"));
     }
   }
 
@@ -292,6 +282,7 @@
     }
 
     const fatorRFields = window.ComparadorFatorR?.readPayloadFields(form) || { aplicar_fator_r: false };
+    const localFields = localPicker?.getPayloadFields() || {};
     const payload = {
       receita_bruta_12m: readNumberField(form, "receita_bruta_12m", "0.00"),
       valor_operacao: readNumberField(form, "valor_operacao", "0.00"),
@@ -304,6 +295,7 @@
       creditos_anteriores: readNumberField(form, "creditos_anteriores", "0.00"),
       percentual_vendas_b2b: readNumberField(form, "percentual_vendas_b2b", "0.00"),
       ...fatorRFields,
+      ...localFields,
     };
 
     if (submitBtn) {
@@ -358,11 +350,20 @@
     window.BrNumber?.applyDefaultTodayDates(form);
     window.BrNumber?.attachMoneyInputs(form);
     window.ComparadorFatorR?.bindControls(form);
+    localPicker = window.AliquotaLocalPicker?.mount("compLocalPicker", {
+      form,
+      ufSelector: "#compUf",
+      dateSelector: "#compData",
+      defaultTipo: "icms",
+      showSimplesNote: true,
+    });
+
+    form.querySelector("#compAnexo")?.addEventListener("change", (ev) => {
+      localPicker?.setTipo(["I", "II"].includes(ev.target.value) ? "icms" : "iss");
+    });
 
     if (printBtn) {
-      printBtn.addEventListener("click", () => {
-        window.ComparadorReport?.printReport("simples_regular");
-      });
+      printBtn.addEventListener("click", () => window.ComparadorReport?.printReport("simples_regular"));
     }
 
     document.querySelectorAll("[data-preset]").forEach((btn) => {

@@ -1,6 +1,7 @@
 /**
  * RegimeRegularOperacaoModule - Submódulo JS para cálculo multi-itens
- * com redução (cClassTrib e base), crédito presumido, compra governamental e diferimento.
+ * com redução (cClassTrib e base), crédito presumido, compra governamental,
+ * diferimento e transição EC 132 (ICMS UF / ISS Municipal).
  */
 (function (window, document) {
   "use strict";
@@ -65,6 +66,15 @@
     const resultEl = document.getElementById("operacaoRegimeRegularResult");
     if (!tbody || !addBtn || !form || !resultEl) return;
 
+    window.BrNumber?.applyDefaultTodayDates(form);
+    const localPicker = window.AliquotaLocalPicker?.mount("opLocalPicker", {
+      form,
+      ufSelector: "#op_uf",
+      dateSelector: "#op_data",
+      defaultTipo: "icms",
+      showSimplesNote: false,
+    });
+
     tbody.replaceChildren(
       createItemRow("ITEM-01", "1.000,00", "000001", "0,00", "0,00", "0,00"),
       createItemRow("ITEM-02", "1.000,00", "200028", "10,00", "50,00", "5,00")
@@ -97,10 +107,12 @@
         return item;
       });
 
+      const localFields = localPicker?.getPayloadFields() || {};
       const payload = {
         data_fato_gerador: form.op_data.value,
         uf: form.op_uf.value,
         itens,
+        ...localFields,
       };
       const tpEnteGov = form.op_tp_ente_gov?.value;
       if (tpEnteGov) {
@@ -122,7 +134,11 @@
         return;
       }
 
+      const transBannerHtml = window.AliquotaLocalPicker?.renderResumoBanner(data.transicao_tributo_local) || "";
+      const localLabel = (data.transicao_tributo_local?.tipo_tributo_local || "ICMS/ISS").toUpperCase();
+
       resultEl.innerHTML = `
+        ${transBannerHtml}
         <div class="result-box p-3">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <strong>Consolidação (${data.quantidade_itens} itens - UF ${data.uf})</strong>
@@ -134,9 +150,9 @@
             <div class="col-4">Total Diferido: <strong>${formatBRL(data.total_diferido)}</strong></div>
             <div class="col-4">Total IBS: <strong>${formatBRL(data.total_ibs)}</strong></div>
             <div class="col-4">Total CBS: <strong>${formatBRL(data.total_cbs)}</strong></div>
+            <div class="col-4">${localLabel} (Transição): <strong>${formatBRL(data.total_tributo_local || 0)}</strong></div>
             <div class="col-4">Créd. Pres. IBS: <strong>${formatBRL(data.total_credito_presumido_ibs)}</strong></div>
             <div class="col-4">Redutor Gov: <strong>${data.percentual_redutor_compra_gov_aplicado}%</strong></div>
-            <div class="col-4">CBS Transf. Ente: <strong>${formatBRL(data.total_cbs_transferida_ente_gov)}</strong></div>
             <div class="col-4">Total Devido: <strong class="text-primary">${formatBRL(data.total_geral_operacao)}</strong></div>
           </div>
         </div>
